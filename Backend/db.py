@@ -29,7 +29,6 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Define relationship - one user can have many ingredients
     ingredients = db.relationship('Ingredient', backref='owner', lazy=True, cascade="all, delete-orphan")
@@ -45,7 +44,6 @@ class User(db.Model):
             'id': self.id,
             'username': self.username,
             'email': self.email,
-            'created_at': self.created_at.isoformat(),
             'ingredients_count': len(self.ingredients)
         }
 
@@ -57,7 +55,6 @@ class Ingredient(db.Model):
     quantity = db.Column(db.Float, default=0)
     unit = db.Column(db.String(20), default='units')
     category = db.Column(db.String(50))
-    expiry_date = db.Column(db.DateTime, nullable=True)
     added_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Foreign key for relationship with User
@@ -70,7 +67,6 @@ class Ingredient(db.Model):
             'quantity': self.quantity,
             'unit': self.unit,
             'category': self.category,
-            'expiry_date': self.expiry_date.isoformat() if self.expiry_date else None,
             'added_at': self.added_at.isoformat(),
             'user_id': self.user_id
         }

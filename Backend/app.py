@@ -77,20 +77,12 @@ def add_ingredient(user_id):
     
     if not data or not data.get('name'):
         return jsonify({'error': 'Ingredient name is required'}), 400
-    
-    expiry_date = None
-    if data.get('expiry_date'):
-        try:
-            expiry_date = datetime.fromisoformat(data['expiry_date'])
-        except ValueError:
-            return jsonify({'error': 'Invalid expiry date format. Use ISO format (YYYY-MM-DDTHH:MM:SS)'}), 400
-    
+
     new_ingredient = Ingredient(
         name=data['name'],
         quantity=data.get('quantity', 0),
         unit=data.get('unit', 'units'),
         category=data.get('category'),
-        expiry_date=expiry_date,
         user_id=user_id
     )
     
@@ -124,15 +116,7 @@ def update_ingredient(ingredient_id):
         ingredient.unit = data['unit']
     if 'category' in data:
         ingredient.category = data['category']
-    if 'expiry_date' in data:
-        if data['expiry_date'] is None:
-            ingredient.expiry_date = None
-        else:
-            try:
-                ingredient.expiry_date = datetime.fromisoformat(data['expiry_date'])
-            except ValueError:
-                return jsonify({'error': 'Invalid expiry date format. Use ISO format (YYYY-MM-DDTHH:MM:SS)'}), 400
-    
+  
     db.session.commit()
     return jsonify(ingredient.to_dict())
 
