@@ -6,11 +6,11 @@ import requests
 import json
 from datetime import datetime
 
-
 db = SQLAlchemy()
 
 # Initialize Flask app
 app = Flask(__name__)
+
 
 # Configure database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pantry.db'
@@ -75,5 +75,5 @@ class Ingredient(db.Model):
         }
 
 # Create all tables
-DatabaseDriver = singleton(DatabaseDriver)
-
+with app.app_context():
+    db.create_all()
