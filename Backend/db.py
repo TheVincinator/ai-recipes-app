@@ -7,15 +7,7 @@ import json
 from datetime import datetime
 
 
-def singleton(cls):
-    instances = {}
-
-    def getinstance():
-        if cls not in instances:
-            instances[cls] = cls()
-        return instances[cls]
-
-    return getinstance
+db = SQLAlchemy()
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -83,6 +75,5 @@ class Ingredient(db.Model):
         }
 
 # Create all tables
-with app.app_context():
-    db.create_all()
+DatabaseDriver = singleton(DatabaseDriver)
 
