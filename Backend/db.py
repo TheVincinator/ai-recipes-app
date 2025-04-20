@@ -6,6 +6,17 @@ import requests
 import json
 from datetime import datetime
 
+
+def singleton(cls):
+    instances = {}
+
+    def getinstance():
+        if cls not in instances:
+            instances[cls] = cls()
+        return instances[cls]
+
+    return getinstance
+
 # Initialize Flask app
 app = Flask(__name__)
 

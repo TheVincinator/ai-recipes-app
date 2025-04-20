@@ -8,6 +8,10 @@ from db import User
 from db import Ingredient
 import db
 
+DB = db.DatabaseDriver()
+
+app = Flask(__name__)
+
 
 # User Routes
 @app.route('/api/users', methods=['POST'])
