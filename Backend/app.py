@@ -1,20 +1,27 @@
-from flask import Flask, app, json, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
-import requests
+from flask import Flask, request, jsonify
+from db import db, User, Ingredient
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
 from datetime import datetime
-from db import User
-from db import Ingredient
-import db
-
-DB = db.DatabaseDriver()
+import requests
+import json
+import os
 
 app = Flask(__name__)
 
+# Config
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['AI_API_KEY'] = os.environ.get('AI_API_KEY', 'your_api_key_here')
+app.config['AI_API_URL'] = os.environ.get('AI_API_URL', 'https://api.openai.com/v1/chat/completions')
+
+# Initialize the database
+db.init_app(app)
+with app.app_context():
+    db.create_all()
+
 
 # User Routes
-@app.route('/api/users', methods=['POST'])
+@app.route('/api/users/', methods=['POST'])
 def create_user():
     data = request.get_json()
     
@@ -38,12 +45,12 @@ def create_user():
     
     return jsonify(new_user.to_dict()), 201
 
-@app.route('/api/users/<int:user_id>', methods=['GET'])
+@app.route('/api/users/<int:user_id>/', methods=['GET'])
 def get_user(user_id):
     user = User.query.get_or_404(user_id)
     return jsonify(user.to_dict())
 
-@app.route('/api/users/<int:user_id>', methods=['PUT'])
+@app.route('/api/users/<int:user_id>/', methods=['PUT'])
 def update_user(user_id):
     user = User.query.get_or_404(user_id)
     data = request.get_json()
@@ -66,7 +73,7 @@ def update_user(user_id):
     db.session.commit()
     return jsonify(user.to_dict())
 
-@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+@app.route('/api/users/<int:user_id>/', methods=['DELETE'])
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)
     db.session.delete(user)
@@ -74,7 +81,7 @@ def delete_user(user_id):
     return jsonify({'message': f'User {user_id} deleted successfully'}), 200
 
 # Ingredient Routes
-@app.route('/api/users/<int:user_id>/ingredients', methods=['POST'])
+@app.route('/api/users/<int:user_id>/ingredients/', methods=['POST'])
 def add_ingredient(user_id):
     user = User.query.get_or_404(user_id)
     data = request.get_json()
@@ -95,19 +102,19 @@ def add_ingredient(user_id):
     
     return jsonify(new_ingredient.to_dict()), 201
 
-@app.route('/api/users/<int:user_id>/ingredients', methods=['GET'])
+@app.route('/api/users/<int:user_id>/ingredients/', methods=['GET'])
 def get_user_ingredients(user_id):
     User.query.get_or_404(user_id)  # Check if user exists
     
     ingredients = Ingredient.query.filter_by(user_id=user_id).all()
     return jsonify([ingredient.to_dict() for ingredient in ingredients])
 
-@app.route('/api/ingredients/<int:ingredient_id>', methods=['GET'])
+@app.route('/api/ingredients/<int:ingredient_id>/', methods=['GET'])
 def get_ingredient(ingredient_id):
     ingredient = Ingredient.query.get_or_404(ingredient_id)
     return jsonify(ingredient.to_dict())
 
-@app.route('/api/ingredients/<int:ingredient_id>', methods=['PUT'])
+@app.route('/api/ingredients/<int:ingredient_id>/', methods=['PUT'])
 def update_ingredient(ingredient_id):
     ingredient = Ingredient.query.get_or_404(ingredient_id)
     data = request.get_json()
@@ -124,7 +131,7 @@ def update_ingredient(ingredient_id):
     db.session.commit()
     return jsonify(ingredient.to_dict())
 
-@app.route('/api/ingredients/<int:ingredient_id>', methods=['DELETE'])
+@app.route('/api/ingredients/<int:ingredient_id>/', methods=['DELETE'])
 def delete_ingredient(ingredient_id):
     ingredient = Ingredient.query.get_or_404(ingredient_id)
     db.session.delete(ingredient)
@@ -132,7 +139,7 @@ def delete_ingredient(ingredient_id):
     return jsonify({'message': f'Ingredient {ingredient_id} deleted successfully'}), 200
 
 # Search Route
-@app.route('/api/users/<int:user_id>/ingredients/search', methods=['GET'])
+@app.route('/api/users/<int:user_id>/ingredients/search/', methods=['GET'])
 def search_ingredients(user_id):
     User.query.get_or_404(user_id)  # Check if user exists
     
@@ -151,7 +158,7 @@ def search_ingredients(user_id):
     return jsonify([ingredient.to_dict() for ingredient in ingredients])
 
 # Authentication Route
-@app.route('/api/auth/login', methods=['POST'])
+@app.route('/api/auth/login/', methods=['POST'])
 def login():
     data = request.get_json()
     
@@ -170,7 +177,7 @@ def login():
     })
 
 # Recipe suggestion route using AI
-@app.route('/api/users/<int:user_id>/recipe-suggestions', methods=['GET'])
+@app.route('/api/users/<int:user_id>/recipe-suggestions/', methods=['GET'])
 def get_recipe_suggestions(user_id):
     user = User.query.get_or_404(user_id)
     
