@@ -84,6 +84,20 @@ def delete_user(user_id):
     db.session.commit()
     return jsonify({'message': f'User {user_id} deleted successfully'}), 200
 
+# #accepts json format of an allergy that the user may have
+# @app.route('/api/allergies/<int:user_id>', methods=['POST'])
+# def add_allergies(user_id):
+#     user = User.query.get(user_id)
+#     data = request.data
+
+#     if user is None:
+#         return json.dumps({"Error": "User not found"}), 404
+    
+#     if ("allergies" in data and data["allergies"]):
+        
+#     else:
+#         return json.dumps({"Error": "No allergies given"}), 200
+
 # Ingredient Routes
 @app.route('/api/users/<int:user_id>/ingredients/', methods=['POST'])
 def add_ingredient(user_id):
