@@ -12,15 +12,6 @@ db = SQLAlchemy()
 app = Flask(__name__)
 
 
-# Configure database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pantry.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# AI API configuration
-# Replace with your actual API key and endpoint
-app.config['AI_API_KEY'] = os.environ.get('AI_API_KEY', 'your_api_key_here')
-app.config['AI_API_URL'] = os.environ.get('AI_API_URL', 'https://api.openai.com/v1/chat/completions')
-
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
 
