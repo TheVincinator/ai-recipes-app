@@ -4,15 +4,19 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import requests
 import json
+from dotenv import load_dotenv
 import os
 
 app = Flask(__name__)
 
 # Config
+load_dotenv() 
+
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['AI_API_KEY'] = os.environ.get('AI_API_KEY', 'your_api_key_here')
-app.config['AI_API_URL'] = os.environ.get('AI_API_URL', 'https://api.openai.com/v1/chat/completions')
+
+app.config['AI_API_KEY'] = os.getenv('AI_API_KEY')
+app.config['AI_API_URL'] = os.getenv('AI_API_URL')
 
 # Initialize the database
 db.init_app(app)
@@ -207,41 +211,28 @@ def get_recipe_suggestions(user_id):
         
     try:
         # Call the AI API
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f"Bearer {app.config['AI_API_KEY']}"
-        }
-        
+        API_URL = "https://router.huggingface.co/novita/v3/openai/chat/completions"
+        headers = {"Authorization": "Bearer " + app.config['AI_API_KEY']}
         payload = {
-            "model": "gpt-4", # or another appropriate model
             "messages": [
-                {
-                    "role": "system",
-                    "content": "You are a helpful assistant that suggests recipes based on available ingredients."
-                },
                 {
                     "role": "user",
                     "content": prompt
                 }
             ],
-            "temperature": 0.7,
-            "max_tokens": 1000
+            "model": "deepseek/deepseek-v3-0324",
         }
+
+        response = requests.post(app.config['AI_API_URL'], headers=headers, json=payload)
         
-        response = requests.post(
-            app.config['AI_API_URL'],
-            headers=headers,
-            data=json.dumps(payload)
-        )
         
         # Check if the request was successful
         if response.status_code == 200:
-            ai_response = response.json()
-            recipes = ai_response['choices'][0]['message']['content']
-            
+            api_response = response.json()
+            recipes = api_response['choices'][0]['message']['content']
             return jsonify({
                 'ingredients_used': ingredient_names,
-                'recipes': recipes,
+                'recipes': recipes,  # this is the full formatted string you saw
                 'filters': {
                     'meal_type': meal_type,
                     'cuisine': cuisine,
