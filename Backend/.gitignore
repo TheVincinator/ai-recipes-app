@@ -1,4 +1,4 @@
 .venv/
-Backend/.env:1
+Backend/.env
 __pycache__/
 instance/
