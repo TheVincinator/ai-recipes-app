@@ -11,6 +11,9 @@ db = SQLAlchemy()
 # Initialize Flask app
 app = Flask(__name__)
 
+# Configure database
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pantry.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
