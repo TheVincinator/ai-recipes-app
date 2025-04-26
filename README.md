@@ -1,3 +1,3 @@
 # AI-Recipes
 
-#Leveraging AI to build recipes based on the ingredients you have
+Based on your ingredients and preferences, you can generate recipes with AI to cook some delicious foods.
