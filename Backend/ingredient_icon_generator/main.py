@@ -153,24 +153,21 @@ def create_icons_no_url(text, size):
     return img
 
 
-def create_icons_empty_boxes(size, image_url):
+def create_icons_empty_boxes(size, pil_image):
     """
     Create an icon from the original image if no objects were detected.
     """
-    response = requests.get(image_url)
-    img = Image.open(BytesIO(response.content)).convert("RGBA")
-
-    width, height = img.size
+    width, height = pil_image.size
     min_dim = min(width, height)
     left = (width - min_dim) // 2
     top = (height - min_dim) // 2
     right = left + min_dim
     bottom = top + min_dim
-    img = img.crop((left, top, right, bottom))
+    pil_image = pil_image.crop((left, top, right, bottom))
 
-    img = img.resize((size, size), Image.LANCZOS)
+    pil_image = pil_image.resize((size, size), Image.LANCZOS)
 
-    return img
+    return pil_image
 
 
 def create_icons_boxes(boxes, confidences, pil_image, size):
@@ -222,7 +219,7 @@ def fetch_or_create_icon(keyword, size):
     boxes, confidences, _, pil_image = detect_objects(image_url, keyword)
 
     if len(boxes) == 0:
-        return create_icons_empty_boxes(size, image_url)
+        return create_icons_empty_boxes(size, pil_image)
     
     return create_icons_boxes(boxes, confidences, pil_image, size)
 
