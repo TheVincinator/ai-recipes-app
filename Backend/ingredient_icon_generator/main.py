@@ -202,7 +202,7 @@ def find_best_match(user_input, options):
     Finds the best matching word if the word differs slightly or if there was a typo.
     """
     match, score = process.extractOne(user_input, options)
-    if score > 80:
+    if score > 90:
         return match
     return None
 
