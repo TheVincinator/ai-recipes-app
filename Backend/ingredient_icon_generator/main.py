@@ -80,7 +80,7 @@ def detect_objects(image_url, user_input):
     class_ids = []
     confidences = []
     boxes = []
-    height, width = img.shape
+    height, width, _ = img.shape
 
     for out in outs:
         for detection in out:
