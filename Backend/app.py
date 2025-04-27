@@ -24,142 +24,190 @@ with app.app_context():
     db.create_all()
 
 
+def failure_response(message, code=404):
+    return json.dumps({"error": message}), code
+
+
+def success_response(data, code=200):
+    return json.dumps({"success": True, "data": data}), code
+
+
 # User Routes
 @app.route('/api/users/', methods=['POST'])
 def create_user():
-    data = request.get_json()
+    body = json.loads(request.data)
     
-    if not data or not data.get('username') or not data.get('email') or not data.get('password'):
-        return jsonify({'error': 'Missing required fields'}), 400
+    if not body or not body.get('username') or not body.get('email') or not body.get('password'):
+        return failure_response('Missing required fields', 400)
     
-    if User.query.filter_by(username=data['username']).first():
-        return jsonify({'error': 'Username already exists'}), 409
+    if User.query.filter_by(username=body['username']).first():
+        return failure_response('Username already exists', 409)
         
-    if User.query.filter_by(email=data['email']).first():
-        return jsonify({'error': 'Email already exists'}), 409
+    if User.query.filter_by(email=body['email']).first():
+        return failure_response('Email already exists', 409)
     
     new_user = User(
-        username=data['username'],
-        email=data['email']
+        username=body['username'],
+        email=body['email']
     )
-    new_user.set_password(data['password'])
+    new_user.set_password(body['password'])
     
     db.session.add(new_user)
     db.session.commit()
     
-    return jsonify(new_user.to_dict()), 201
+    return success_response(new_user.to_dict(), 201)
 
-@app.route('/api/users/<int:user_id>/', methods=['GET'])
+
+@app.route('/api/users/<int:user_id>/')
 def get_user(user_id):
-    user = User.query.get_or_404(user_id)
-    return jsonify(user.to_dict())
+    user = User.query.get(user_id)
+
+    if user is None:
+        return failure_response("User not found")
+
+    return success_response(user.to_dict())
+
 
 @app.route('/api/users/<int:user_id>/', methods=['PUT'])
 def update_user(user_id):
-    user = User.query.get_or_404(user_id)
-    data = request.get_json()
+    user = User.query.get(user_id)
+
+    if user is None:
+        return failure_response("User not found")
+
+    body = json.loads(request.data)
     
-    if 'username' in data:
-        existing_user = User.query.filter_by(username=data['username']).first()
+    if 'username' in body:
+        existing_user = User.query.filter_by(username=body['username']).first()
         if existing_user and existing_user.id != user_id:
-            return jsonify({'error': 'Username already exists'}), 409
-        user.username = data['username']
+            return failure_response('Username already exists', 409)
+        user.username = body['username']
         
-    if 'email' in data:
-        existing_user = User.query.filter_by(email=data['email']).first()
+    if 'email' in body:
+        existing_user = User.query.filter_by(email=body['email']).first()
         if existing_user and existing_user.id != user_id:
-            return jsonify({'error': 'Email already exists'}), 409
-        user.email = data['email']
+            return failure_response('Email already exists', 409)
+        user.email = body['email']
         
-    if 'password' in data:
-        user.set_password(data['password'])
+    if 'password' in body:
+        user.set_password(body['password'])
     
     db.session.commit()
-    return jsonify(user.to_dict())
+    return success_response(user.to_dict())
+
 
 @app.route('/api/users/<int:user_id>/', methods=['DELETE'])
 def delete_user(user_id):
-    user = User.query.get_or_404(user_id)
+    user = User.query.get(user_id)
+
+    if user is None:
+        return failure_response("User not found")
+
     db.session.delete(user)
     db.session.commit()
-    return jsonify({'message': f'User {user_id} deleted successfully'}), 200
+    return success_response(user.to_dict())
+
 
 # #accepts json format of an allergy that the user may have
 # @app.route('/api/allergies/<int:user_id>', methods=['POST'])
 # def add_allergies(user_id):
 #     user = User.query.get(user_id)
-#     data = request.data
+#     body = json.loads(request.data)
 
 #     if user is None:
 #         return json.dumps({"Error": "User not found"}), 404
     
-#     if ("allergies" in data and data["allergies"]):
+#     if ("allergies" in body and body["allergies"]):
         
 #     else:
 #         return json.dumps({"Error": "No allergies given"}), 200
 
+
 # Ingredient Routes
 @app.route('/api/users/<int:user_id>/ingredients/', methods=['POST'])
 def add_ingredient(user_id):
-    user = User.query.get_or_404(user_id)
-    data = request.get_json()
+    user = User.query.get(user_id)
+
+    if user is None:
+        return failure_response("User not found")
+
+    body = json.loads(request.data)
     
-    if not data or not data.get('name'):
-        return jsonify({'error': 'Ingredient name is required'}), 400
+    if not body or not body.get('name'):
+        return failure_response('Ingredient name is required', 400)
 
     new_ingredient = Ingredient(
-        name=data['name'],
-        quantity=data.get('quantity', 0),
-        unit=data.get('unit', 'units'),
-        category=data.get('category'),
+        name=body['name'],
+        quantity=body.get('quantity', 0),
+        unit=body.get('unit', 'units'),
+        category=body.get('category'),
         user_id=user_id
     )
     
     db.session.add(new_ingredient)
     db.session.commit()
     
-    return jsonify(new_ingredient.to_dict()), 201
+    return success_response(new_ingredient.to_dict(), 201)
 
-@app.route('/api/users/<int:user_id>/ingredients/', methods=['GET'])
+
+@app.route('/api/users/<int:user_id>/ingredients/')
 def get_user_ingredients(user_id):
-    User.query.get_or_404(user_id)  # Check if user exists
+    if User.query.get(user_id) is None:    # Check if user exists
+        return failure_response("User not found")
     
     ingredients = Ingredient.query.filter_by(user_id=user_id).all()
-    return jsonify([ingredient.to_dict() for ingredient in ingredients])
+    return success_response([ingredient.to_dict() for ingredient in ingredients])
 
-@app.route('/api/ingredients/<int:ingredient_id>/', methods=['GET'])
+
+@app.route('/api/ingredients/<int:ingredient_id>/')
 def get_ingredient(ingredient_id):
-    ingredient = Ingredient.query.get_or_404(ingredient_id)
-    return jsonify(ingredient.to_dict())
+    ingredient = Ingredient.query.get(ingredient_id)
+
+    if ingredient is None:
+        return failure_response("Ingredient not found")
+
+    return success_response(ingredient.to_dict())
+
 
 @app.route('/api/ingredients/<int:ingredient_id>/', methods=['PUT'])
 def update_ingredient(ingredient_id):
-    ingredient = Ingredient.query.get_or_404(ingredient_id)
-    data = request.get_json()
+    ingredient = Ingredient.query.get(ingredient_id)
+
+    if ingredient is None:
+        return failure_response("Ingredient not found")
+
+    body = json.loads(request.data)
     
-    if 'name' in data:
-        ingredient.name = data['name']
-    if 'quantity' in data:
-        ingredient.quantity = data['quantity']
-    if 'unit' in data:
-        ingredient.unit = data['unit']
-    if 'category' in data:
-        ingredient.category = data['category']
+    if 'name' in body:
+        ingredient.name = body['name']
+    if 'quantity' in body:
+        ingredient.quantity = body['quantity']
+    if 'unit' in body:
+        ingredient.unit = body['unit']
+    if 'category' in body:
+        ingredient.category = body['category']
   
     db.session.commit()
-    return jsonify(ingredient.to_dict())
+    return success_response(ingredient.to_dict())
+
 
 @app.route('/api/ingredients/<int:ingredient_id>/', methods=['DELETE'])
 def delete_ingredient(ingredient_id):
-    ingredient = Ingredient.query.get_or_404(ingredient_id)
+    ingredient = Ingredient.query.get(ingredient_id)
+
+    if ingredient is None:
+        return failure_response("Ingredient not found")
+
     db.session.delete(ingredient)
     db.session.commit()
-    return jsonify({'message': f'Ingredient {ingredient_id} deleted successfully'}), 200
+    return success_response(ingredient.to_dict())
+
 
 # Search Route
-@app.route('/api/users/<int:user_id>/ingredients/search/', methods=['GET'])
+@app.route('/api/users/<int:user_id>/ingredients/search/')
 def search_ingredients(user_id):
-    User.query.get_or_404(user_id)  # Check if user exists
+    if User.query.get(user_id) is None:    # Check if user exists
+        return failure_response("User not found")
     
     query = request.args.get('q', '')
     category = request.args.get('category')
@@ -173,37 +221,39 @@ def search_ingredients(user_id):
         ingredients_query = ingredients_query.filter_by(category=category)
     
     ingredients = ingredients_query.all()
-    return jsonify([ingredient.to_dict() for ingredient in ingredients])
+    return success_response([ingredient.to_dict() for ingredient in ingredients])
+
 
 # Authentication Route
 @app.route('/api/auth/login/', methods=['POST'])
 def login():
-    data = request.get_json()
+    body = json.loads(request.data)
     
-    if not data or not data.get('username') or not data.get('password'):
-        return jsonify({'error': 'Missing username or password'}), 400
+    if not body or not body.get('username') or not body.get('password'):
+        return failure_response('Missing username or password', 400)
     
-    user = User.query.filter_by(username=data['username']).first()
+    user = User.query.filter_by(username=body['username']).first()
     
-    if not user or not user.check_password(data['password']):
-        return jsonify({'error': 'Invalid username or password'}), 401
+    if not user or not user.check_password(body['password']):
+        return failure_response('Invalid username or password', 401)
     
     # In a real application, you'd generate a JWT token or session here
-    return jsonify({
-        'message': 'Login successful',
-        'user': user.to_dict()
-    })
+    return success_response({'message': 'Login successful', 'user': user.to_dict()})
+
 
 # Recipe suggestion route using AI
-@app.route('/api/users/<int:user_id>/recipe-suggestions/', methods=['GET'])
+@app.route('/api/users/<int:user_id>/recipe-suggestions/')
 def get_recipe_suggestions(user_id):
-    user = User.query.get_or_404(user_id)
+    user = User.query.get(user_id)
+
+    if user is None:
+        return failure_response("User not found")
     
     # Get all ingredients for the user
     ingredients = Ingredient.query.filter_by(user_id=user_id).all()
     
     if not ingredients:
-        return jsonify({'error': 'No ingredients found for this user'}), 404
+        return failure_response('No ingredients found for this user')
     
     # Format ingredients as a list of names
     ingredient_names = [ingredient.name for ingredient in ingredients]
@@ -244,7 +294,7 @@ def get_recipe_suggestions(user_id):
         if response.status_code == 200:
             api_response = response.json()
             recipes = api_response['choices'][0]['message']['content']
-            return jsonify({
+            return success_response({
                 'ingredients_used': ingredient_names,
                 'recipes': recipes,  # this is the full formatted string you saw
                 'filters': {
@@ -254,14 +304,10 @@ def get_recipe_suggestions(user_id):
                 }
             })
         else:
-            return jsonify({
-                'error': 'Failed to get recipe suggestions',
-                'status_code': response.status_code,
-                'response': response.text
-            }), 500
+            return failure_response(f'Failed to get recipe suggestions: {response.text}', response.status_code)
             
     except Exception as e:
-        return jsonify({'error': f'Error calling AI API: {str(e)}'}), 500
+        return failure_response(f'Error calling AI API: {str(e)}', 500)
 
 if __name__ == '__main__':
     app.run(debug=True)
