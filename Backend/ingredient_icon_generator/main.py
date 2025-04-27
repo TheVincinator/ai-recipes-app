@@ -55,10 +55,18 @@ def get_pexels_image(query, api_key):
     """
     headers = {"Authorization": api_key}
     url = f"https://api.pexels.com/v1/search?query={query}&per_page=1"
-    response = requests.get(url, headers=headers)
-    data = response.json()
 
-    if response.status_code == 200 and data.get("photos"):
+    response = requests.get(url, headers=headers, timeout=10)
+
+    if response.status_code != 200:
+        return None
+
+    try:
+        data = response.json()
+    except ValueError:
+        return None
+
+    if data.get("photos"):
         return data["photos"][0]["src"]["original"]
     else:
         return None
