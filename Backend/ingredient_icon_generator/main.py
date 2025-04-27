@@ -214,7 +214,7 @@ def fetch_or_create_icon(keyword, size):
     boxes, confidences, pil_image = detect_objects(image_url, keyword)
 
     if len(boxes) == 0:
-        return create_icons_empty_boxes(keyword, size, image_url)
+        return create_icons_empty_boxes(size, image_url)
     
     return create_icons_boxes(boxes, confidences, pil_image, size)
 
