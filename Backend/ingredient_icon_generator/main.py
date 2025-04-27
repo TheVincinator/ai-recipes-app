@@ -219,7 +219,7 @@ def fetch_or_create_icon(keyword, size):
     if not image_url:
         return create_icons_no_url(keyword, size)
 
-    boxes, confidences, pil_image = detect_objects(image_url, keyword)
+    boxes, confidences, _, pil_image = detect_objects(image_url, keyword)
 
     if len(boxes) == 0:
         return create_icons_empty_boxes(size, image_url)
