@@ -11,15 +11,9 @@ db = SQLAlchemy()
 # Initialize Flask app
 app = Flask(__name__)
 
-
 # Configure database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pantry.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# AI API configuration
-# Replace with your actual API key and endpoint
-app.config['AI_API_KEY'] = os.environ.get('AI_API_KEY', 'your_api_key_here')
-app.config['AI_API_URL'] = os.environ.get('AI_API_URL', 'https://api.openai.com/v1/chat/completions')
 
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
@@ -29,9 +23,10 @@ class User(db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
+    username = db.Column(db.String, unique=True, nullable=False)
+    email = db.Column(db.String, unique=True, nullable=False)
+    password_hash = db.Column(db.String, nullable=False)
+    # allergies = db.Column(db.String, nullable=True)
     
     # Define relationship - one user can have many ingredients
     ingredients = db.relationship('Ingredient', backref='owner', lazy=True, cascade="all, delete-orphan")
