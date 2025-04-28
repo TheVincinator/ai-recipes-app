@@ -26,7 +26,6 @@ class User(db.Model):
     username = db.Column(db.String, unique=True, nullable=False)
     email = db.Column(db.String, unique=True, nullable=False)
     password_hash = db.Column(db.String, nullable=False)
-    # allergies = db.Column(db.String, nullable=True)
     
     # Define relationship - one user can have many ingredients
     ingredients = db.relationship('Ingredient', backref='owner', lazy=True, cascade="all, delete-orphan")
@@ -44,6 +43,7 @@ class User(db.Model):
             'email': self.email,
             'ingredients_count': len(self.ingredients)
         }
+
 
 class Ingredient(db.Model):
     __tablename__ = 'ingredients'
@@ -68,6 +68,23 @@ class Ingredient(db.Model):
             'added_at': self.added_at.isoformat(),
             'user_id': self.user_id
         }
+    
+
+class Allergies(db.Model):
+    __tablename__ = 'allergies'
+
+    id = db.Column(db.Integer, primary_key=True)
+    food_allergy_name = db.Column(db.String, nullable=False)
+
+    # Foreign key for relationship with User table
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'food_allergy_name': self.food_allergy_name,
+        }
+        
 
 # Create all tables
 with app.app_context():
