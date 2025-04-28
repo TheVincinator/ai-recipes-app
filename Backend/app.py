@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from db import db, User, Ingredient
+from db import db, User, Ingredient, Allergies
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import requests
@@ -249,14 +249,20 @@ def get_recipe_suggestions(user_id):
     if user is None:
         return failure_response("User not found")
     
-    # Get all ingredients for the user
+    # Get all ingredients and allergies for the user
     ingredients = Ingredient.query.filter_by(user_id=user_id).all()
+    allergies = Allergies.query.filter_by(user_id=user_id).all()
     
     if not ingredients:
         return failure_response('No ingredients found for this user')
     
     # Format ingredients as a list of names
     ingredient_names = [ingredient.name for ingredient in ingredients]
+
+    #get allergies
+    allergy_names = []
+    if allergies:
+        allergy_names = [allergy.food_allergy_name for allergy in allergies]
     
     # Optional parameters
     meal_type = request.args.get('meal_type', '')  # breakfast, lunch, dinner
@@ -272,6 +278,9 @@ def get_recipe_suggestions(user_id):
         prompt += f" The cuisine should be {cuisine}."
     if diet:
         prompt += f" The diet restriction is {diet}."
+
+    if len(allergy_names) > 0:
+        prompt += f"Please do not include these foods for allergy reasons {', '.join(allergy_names)}."
         
     try:
         # Call the AI API
