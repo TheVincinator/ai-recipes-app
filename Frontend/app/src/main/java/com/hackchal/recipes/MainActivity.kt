@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.hackchal.recipes.ui.screens.HomeScreen
+import com.hackchal.recipes.ui.screens.NavWrapper
 import com.hackchal.recipes.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -20,7 +21,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
-                HomeScreen(Search = { _, _ -> })
+                NavWrapper()
             }
         }
     }
