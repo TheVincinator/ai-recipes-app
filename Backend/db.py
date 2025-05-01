@@ -70,11 +70,12 @@ class Ingredient(db.Model):
         }
     
 
-class Allergies(db.Model):
+class Allergy(db.Model):
     __tablename__ = 'allergies'
 
     id = db.Column(db.Integer, primary_key=True)
     food_allergy_name = db.Column(db.String, nullable=False)
+    allergey_category = db.Column(db.String, nullable=False)  
 
     # Foreign key for relationship with User table
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -83,6 +84,7 @@ class Allergies(db.Model):
         return {
             'id': self.id,
             'food_allergy_name': self.food_allergy_name,
+            'allergy_category': self.allergey_category
         }
         
 

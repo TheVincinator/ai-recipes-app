@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from db import db, User, Ingredient, Allergies
+from db import db, User, Ingredient, Allergy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import requests
@@ -108,19 +108,27 @@ def delete_user(user_id):
     return success_response(user.to_dict())
 
 
-# #accepts json format of an allergy that the user may have
-# @app.route('/api/allergies/<int:user_id>', methods=['POST'])
-# def add_allergies(user_id):
-#     user = User.query.get(user_id)
-#     body = json.loads(request.data)
+#accepts json format of an allergy that the user may have
+@app.route('/api/allergies/<int:user_id>', methods=['POST'])
+def add_allergies(user_id):
+    user = User.query.get(user_id)
+    body = json.loads(request.data)
 
-#     if user is None:
-#         return json.dumps({"Error": "User not found"}), 404
+    if user is None:
+        return json.dumps({"Error": "User not found"}), 404
     
-#     if ("allergies" in body and body["allergies"]):
-        
-#     else:
-#         return json.dumps({"Error": "No allergies given"}), 200
+    if ("allergies" in body and body["allergies"] and "category" in body and body["category"]):
+        new_allergy = Allergy(
+            food_allergy_name = body['allergies'],
+            allergy_category = body['allergy_category']
+        )
+
+        db.session.add(new_allergy)
+        db.session.commit()
+
+        return success_response(new_allergy.to_dict(), 201)
+    else:
+        return json.dumps({"Error": "No allergies given"}), 200
 
 
 # Ingredient Routes
@@ -251,7 +259,7 @@ def get_recipe_suggestions(user_id):
     
     # Get all ingredients and allergies for the user
     ingredients = Ingredient.query.filter_by(user_id=user_id).all()
-    allergies = Allergies.query.filter_by(user_id=user_id).all()
+    allergies = Allergy.query.filter_by(user_id=user_id).all()
     
     if not ingredients:
         return failure_response('No ingredients found for this user')
