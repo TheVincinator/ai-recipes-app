@@ -4,3 +4,14 @@ plugins {
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
 }
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // If using Hilt
+        //classpath("com.google.dagger:hilt-android-gradle-plugin:2.51.1")
+    }
+}

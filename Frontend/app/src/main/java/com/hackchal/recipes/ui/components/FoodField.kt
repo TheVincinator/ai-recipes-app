@@ -35,6 +35,8 @@ fun FoodField(
             onValueChange = onValueChange,
             label = {Text(text = label)},
             modifier = Modifier.weight(1f),
+
+
         )
 
         Spacer(modifier = Modifier.width(10.dp))
