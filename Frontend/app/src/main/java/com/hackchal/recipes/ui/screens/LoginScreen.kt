@@ -2,6 +2,6 @@ package com.hackchal.recipes.ui.screens
 
 import androidx.navigation.NavHostController
 
-fun OutputScreen(
+fun LoginScreen(
     navController: NavHostController,
 ) {}

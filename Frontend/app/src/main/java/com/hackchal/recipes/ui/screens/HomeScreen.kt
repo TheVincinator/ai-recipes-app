@@ -28,11 +28,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import com.hackchal.recipes.ui.components.FoodField
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
+    navController: NavHostController,
     Search: (ingredients: List<String>, restrictions: String) -> Unit
 ) {
     var ingredientInput by remember { mutableStateOf("") }
@@ -145,5 +148,8 @@ fun HomeScreen(
 @Preview
 @Composable
 fun MainScreenPreview(){
-    HomeScreen(Search = { _, _ -> })
+    HomeScreen(
+        Search = { _, _ -> },
+        navController = rememberNavController()
+    )
 }
