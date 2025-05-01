@@ -6,8 +6,12 @@ import requests
 import json
 from dotenv import load_dotenv
 import os
+from flask_cors import CORS
+
 
 app = Flask(__name__)
+
+CORS(app)
 
 # Config
 load_dotenv() 
@@ -120,7 +124,8 @@ def add_allergies(user_id):
     if ("allergies" in body and body["allergies"] and "category" in body and body["category"]):
         new_allergy = Allergy(
             food_allergy_name = body['allergies'],
-            allergy_category = body['allergy_category']
+            allergy_category = body['allergy_category'],
+            user_id=user_id  
         )
 
         db.session.add(new_allergy)
@@ -327,4 +332,4 @@ def get_recipe_suggestions(user_id):
         return failure_response(f'Error calling AI API: {str(e)}', 500)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
