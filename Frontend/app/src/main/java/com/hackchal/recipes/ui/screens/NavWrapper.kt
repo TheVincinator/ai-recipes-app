@@ -14,54 +14,19 @@ fun NavWrapper() {
         navController = navController,
         startDestination = "login"
     ) {
-        // Login/Signup Screen
         composable("login") {
             LoginScreen(
                 navController = navController,
-                onLogin = { username, password ->
-                    //Login API here
-                    if (isValidLogin(username, password)) {
-                        navController.navigate("home") {
-                            popUpTo("login") { inclusive = true }
-                        }
-                    }
-                },
-                onSignUp = { username, password ->
-                    // Add your actual signup logic here
-                    if (createNewAccount(username, password)) { // Implement this
-                        navController.navigate("home") {
-                            popUpTo("login") { inclusive = true }
-                        }
-                    }
-                }
             )
         }
 
-        // Home Screen
         composable("home") {
-            HomeScreen(
-                navController = navController,
-                Search = { ingredients, restrictions ->
-                    // Handle search and navigate to results
-                    navController.navigate("output")
-                }
-            )
+            HomeScreen(navController = navController)
         }
 
-        // Output Screen
-        composable("output") {
-            OutputScreen(
-                navController = navController
-            )
+        composable("output/{ingredients}") { backStackEntry ->
+            val ingredients = backStackEntry.arguments?.getString("ingredients") ?: ""
+            OutputScreen(ingredients = ingredients)
         }
     }
-}
-
-// Replace with real authentication:
-private fun isValidLogin(username: String, password: String): Boolean {
-    return username.isNotBlank() && password.length >= 6
-}
-
-private fun createNewAccount(username: String, password: String): Boolean {
-    return username.isNotBlank() && password.length >= 6
 }
