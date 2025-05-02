@@ -1,6 +1,7 @@
 package com.hackchal.recipes.ui.screens
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -11,26 +12,21 @@ fun NavWrapper() {
 
     NavHost(
         navController = navController,
-        startDestination = "home"
+        startDestination = "login"
     ) {
-        // Home
-        composable("home") {
-            HomeScreen(
-                navController=navController,
-                Search = { _, _ -> }
-            )
-        }
         composable("login") {
             LoginScreen(
-                navController= navController
+                navController = navController,
             )
         }
 
-        //output Screen
-        composable( "output") {
-            OutputScreen(
-                navController = navController
-            )
+        composable("home") {
+            HomeScreen(navController = navController)
+        }
+
+        composable("output/{ingredients}") { backStackEntry ->
+            val ingredients = backStackEntry.arguments?.getString("ingredients") ?: ""
+            OutputScreen(ingredients = ingredients)
         }
     }
 }
