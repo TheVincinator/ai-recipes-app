@@ -25,5 +25,7 @@ The Ingredient Icon Generator is a feature of AI Recipes that creates 256×256 i
 
 <img width="314" alt="Screenshot 2025-05-02 at 11 54 50 PM" src="https://github.com/user-attachments/assets/1649baf9-7d36-46c8-bb68-6a4a64da16eb" />
 <img width="314" alt="Screenshot 2025-05-02 at 11 55 42 PM" src="https://github.com/user-attachments/assets/ecfb881d-9145-444a-b79d-5282efdab6d4" />
+<img width="301" alt="Screenshot 2025-05-03 at 12 46 16 AM" src="https://github.com/user-attachments/assets/c8f7f808-ecb4-45fa-9872-25ab94daabbe" />
+
 
 > ⚠️ **Note:** You must provide your own [Pexels API key](https://www.pexels.com/api/) by updating the `PEXELS_API_KEY` variable in `main.py`.
