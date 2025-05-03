@@ -113,7 +113,7 @@ def delete_user(user_id):
 
 
 #accepts json format of an allergy that the user may have
-@app.route('/api/allergies/<int:user_id>', methods=['POST'])
+@app.route('/api/allergies/<int:user_id>/', methods=['POST'])
 def add_allergies(user_id):
     user = User.query.get(user_id)
     body = json.loads(request.data)
@@ -124,7 +124,7 @@ def add_allergies(user_id):
     if ("allergies" in body and body["allergies"] and "category" in body and body["category"]):
         new_allergy = Allergy(
             food_allergy_name = body['allergies'],
-            allergy_category = body['allergy_category'],
+            allergey_category = body['category'],
             user_id=user_id  
         )
 

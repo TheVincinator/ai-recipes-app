@@ -12,4 +12,4 @@ opencv-python==4.11.0.86
 fuzzywuzzy==0.18.0
 python-Levenshtein==0.27.1
 python-dotenv==1.1.0
-flask-cors
+Flask-Cors==4.0.0
