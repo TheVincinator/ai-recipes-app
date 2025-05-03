@@ -15,9 +15,7 @@ fun NavWrapper() {
         startDestination = "login"
     ) {
         composable("login") {
-            LoginScreen(
-                navController = navController,
-            )
+            LoginScreen(navController = navController)
         }
 
         composable("home") {
@@ -25,8 +23,10 @@ fun NavWrapper() {
         }
 
         composable("output/{ingredients}") { backStackEntry ->
-            val ingredients = backStackEntry.arguments?.getString("ingredients") ?: ""
-            OutputScreen(ingredients = ingredients)
+            OutputScreen(
+                nav = navController,
+                dataFromPrev = backStackEntry.arguments?.getString("ingredients") ?: ""
+            )
         }
     }
 }

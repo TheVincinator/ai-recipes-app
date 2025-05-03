@@ -1,86 +1,66 @@
 package com.hackchal.recipes.ui.screens
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
+import androidx.navigation.NavHostController
 
+// shows recipe results
 @Composable
-fun OutputScreen(ingredients: String) {
-    var recipeText by remember { mutableStateOf("Generating recipes...") }
-    var isLoading by remember { mutableStateOf(true) }
+fun OutputScreen(nav: NavHostController, dataFromPrev: String?) {
+    var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var recipeText by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) {
-        try {
-            val result = withContext(Dispatchers.IO) {
-                generateRecipesSimple(ingredients.split(","))
-            }
-            recipeText = result
-            isLoading = false
-        } catch (e: Exception) {
-            error = e.message ?: "Unknown error"
-            isLoading = false
-        }
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (isLoading) {
+    Box(Modifier.fillMaxSize()) {
+        if (loading) {
             CircularProgressIndicator(Modifier.align(Alignment.Center))
         } else {
-            Column(modifier = Modifier.padding(16.dp)) {
-                if (error != null) {
-                    Text("Error: $error", color = Color.Red)
-                } else {
-                    Text(recipeText)
+            Column(
+                Modifier
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                error?.let {
+                    Text(it, color=MaterialTheme.colorScheme.error, modifier=Modifier.padding(bottom=16.dp))
+                }
+
+                // show recipe lines
+                recipeText.split("\n").forEach { line ->
+                    when {
+                        line.startsWith("## ") -> Text(
+                            line.removePrefix("## "),
+                            style=MaterialTheme.typography.headlineMedium,
+                            modifier=Modifier.padding(vertical=8.dp)
+                        )
+                        line.startsWith("### ") -> Text(
+                            line.removePrefix("### "),
+                            style=MaterialTheme.typography.headlineSmall,
+                            modifier=Modifier.padding(vertical=4.dp)
+                        )
+                        line.startsWith("- ") -> Text(
+                            "• ${line.removePrefix("- ")}",
+                            modifier=Modifier.padding(start=16.dp, bottom=4.dp)
+                        )
+                        line.isNotBlank() -> Text(line, modifier=Modifier.padding(bottom=8.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = { nav.popBackStack() },
+                    modifier=Modifier.fillMaxWidth()
+                ) {
+                    Text("Go Back")
                 }
             }
         }
     }
-}
-
-private suspend fun generateRecipesSimple(ingredients: List<String>): String {
-    val url = URL("http://10.0.2.2:5000/api/recipe-suggestions") // Your Flask endpoint
-    val connection = url.openConnection() as HttpURLConnection
-
-    return try {
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("Content-Type", "application/json")
-        connection.doOutput = true
-
-        val jsonInput = """
-            {
-                "ingredients": ${ingredients.toJsonString()}
-            }
-        """.trimIndent()
-
-        connection.outputStream.use { os ->
-            os.write(jsonInput.toByteArray())
-            os.flush()
-        }
-
-        connection.inputStream.use { it.reader().readText() }
-    } finally {
-        connection.disconnect()
-    }
-}
-
-private fun List<String>.toJsonString(): String {
-    return this.joinToString(", ", "[", "]") { "\"$it\"" }
 }
