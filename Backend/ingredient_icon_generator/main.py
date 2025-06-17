@@ -8,12 +8,13 @@ from fuzzywuzzy import process
 import argparse
 
 # Config
-CONFIG_FILE = 'object_detection/yolov3-spp.cfg'
-WEIGHTS_FILE = 'object_detection/yolov3-spp.weights'
-CLASSES_FILE = 'object_detection/coco.names'
-PEXELS_API_KEY = "BbxBv38uCmX9EZHXSvt7ygFjzo6z0AaTBVA4MGa86UJ0Qk0JNZLyLVCU"
-OUTPUT_FOLDER = "icons"
-FONT_FILE = "fonts/Roboto-VariableFont_wdth,wght.ttf"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3-spp.cfg')
+WEIGHTS_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3-spp.weights')
+CLASSES_FILE = os.path.join(BASE_DIR, 'object_detection/coco.names')
+PIXABAY_API_KEY = "29734759-0e8a108bda43f6ae4df7b6618"
+OUTPUT_FOLDER = os.path.join(BASE_DIR, "assets/ingredients/generated_images")
+FONT_FILE = os.path.join(BASE_DIR, "fonts/Roboto-VariableFont_wdth,wght.ttf")
 
 # Load YOLO
 net = cv2.dnn.readNetFromDarknet(CONFIG_FILE, WEIGHTS_FILE)
@@ -24,51 +25,28 @@ output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
 with open(CLASSES_FILE, 'r') as f:
     classes = [line.strip() for line in f.readlines()]
 
-# Predefined ingredients
-ingredient_images = {
-    "beans": "assets/beans.jpg",
-    "butter": "assets/butter.jpg",
-    "cheese": "assets/cheese.jpg",
-    "eggs": "assets/eggs.jpg",
-    "flour": "assets/flour.jpg",
-    "garlic": "assets/garlic.jpg",
-    "herbs": "assets/herbs.jpg",
-    "meat": "assets/meat.jpg",
-    "milk": "assets/milk.jpg",
-    "oil": "assets/oil.jpg",
-    "onions": "assets/onions.jpg",
-    "rice": "assets/rice.jpg",
-    "salt": "assets/salt.jpg",
-    "spices": "assets/spices.jpg",
-    "sugar": "assets/sugar.jpg",
-    "tomatoes": "assets/tomatoes.jpg",
-    "vegetables": "assets/vegetables.jpg",
-    "vinegar": "assets/vinegar.jpg",
-    "water": "assets/water.jpg",
-}
-
 # === Functions / Helper Functions ===
 
-def get_pexels_image(query, api_key):
+def get_pixabay_image(query, category, api_key):
     """
-    Fetch an image from the Pexels API based on a search query.
+    Fetch an image URL from the Pixabay API based on a search query.
     """
-    headers = {"Authorization": api_key}
-    url = f"https://api.pexels.com/v1/search?query={query}&per_page=1"
-
-    response = requests.get(url, headers=headers, timeout=10)
-
-    if response.status_code != 200:
-        return None
+    if category:
+        query = f"{query} {category}"
+        
+    url = f"https://pixabay.com/api/?key={api_key}&q={requests.utils.quote(query)}&image_type=photo&category=food&per_page=3"
 
     try:
+        response = requests.get(url, timeout=10)
+        if response.status_code != 200:
+            return None
         data = response.json()
-    except ValueError:
-        return None
-
-    if data.get("photos"):
-        return data["photos"][0]["src"]["original"]
-    else:
+        if data.get("hits") and len(data["hits"]) > 0:
+            # Return the first image's large image URL (webformatURL or largeImageURL)
+            return data["hits"][0].get("largeImageURL") or data["hits"][0].get("webformatURL")
+        else:
+            return None
+    except Exception:
         return None
 
 
@@ -207,11 +185,11 @@ def find_best_match(user_input, options):
     return None
 
 
-def fetch_or_create_icon(keyword, size):
+def fetch_or_create_icon(keyword, category, size):
     """
     Fetches or generates an icon based on the keyword.
     """
-    image_url = get_pexels_image(keyword, PEXELS_API_KEY)
+    image_url = get_pixabay_image(keyword, category, PIXABAY_API_KEY)
 
     if not image_url:
         return create_icons_no_url(keyword, size)
@@ -224,24 +202,17 @@ def fetch_or_create_icon(keyword, size):
     return create_icons_boxes(boxes, confidences, pil_image, size)
 
 
-def get_ingredient_icon(user_input, size=256):
+def get_ingredient_icon(user_input, category, size=256):
     """
     Retrieve an icon for an ingredient, either from local assets or online.
     """
     try:    
-        best_match = find_best_match(user_input.lower(), ingredient_images.keys())
-
-        if best_match:
-            local_path = ingredient_images[best_match]
-            if os.path.exists(local_path):
-                return Image.open(local_path).resize((size, size))
-
         best_match = find_best_match(user_input.lower(), classes)
 
         if best_match:
-            return fetch_or_create_icon(best_match, size)
+            return fetch_or_create_icon(best_match, category, size)
         else:
-            return fetch_or_create_icon(user_input, size)
+            return fetch_or_create_icon(user_input, category, size)
 
     except Exception as e:
         return create_icons_no_url("Error finding image", size)
@@ -255,9 +226,6 @@ def user_input_flow(user_input, textbox_id):
 
     if query.strip():
         icon = get_ingredient_icon(query)
-
-        if not os.path.exists(OUTPUT_FOLDER):
-            os.makedirs(OUTPUT_FOLDER)
 
         filename = os.path.join(OUTPUT_FOLDER, f"ingredient_{textbox_id}.png")
 

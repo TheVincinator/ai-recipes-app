@@ -1,10 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
-import requests
-import json
-from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -29,6 +25,8 @@ class User(db.Model):
     
     # Define relationship - one user can have many ingredients
     ingredients = db.relationship('Ingredient', backref='owner', lazy=True, cascade="all, delete-orphan")
+    allergies = db.relationship('Allergy', backref='owner', lazy=True, cascade="all, delete-orphan")
+    recipes = db.relationship('Recipe', backref='owner', lazy=True, cascade="all, delete-orphan")
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -50,10 +48,9 @@ class Ingredient(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    quantity = db.Column(db.Float, default=0)
-    unit = db.Column(db.String(20), default='units')
+    quantity = db.Column(db.Float)
+    unit = db.Column(db.String(20))
     category = db.Column(db.String(50))
-    added_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Foreign key for relationship with User
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -65,7 +62,6 @@ class Ingredient(db.Model):
             'quantity': self.quantity,
             'unit': self.unit,
             'category': self.category,
-            'added_at': self.added_at.isoformat(),
             'user_id': self.user_id
         }
     
@@ -74,8 +70,8 @@ class Allergy(db.Model):
     __tablename__ = 'allergies'
 
     id = db.Column(db.Integer, primary_key=True)
-    food_allergy_name = db.Column(db.String, nullable=False)
-    allergey_category = db.Column(db.String, nullable=False)  
+    allergy_name = db.Column(db.String, nullable=False)
+    allergy_category = db.Column(db.String, nullable=False)  
 
     # Foreign key for relationship with User table
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -83,8 +79,28 @@ class Allergy(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
-            'food_allergy_name': self.food_allergy_name,
-            'allergy_category': self.allergey_category
+            'allergy_name': self.allergy_name,
+            'allergy_category': self.allergy_category,
+            "user_id": self.user_id
+        }
+    
+
+class Recipe(db.Model):
+    __tablename__ = 'recipes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    recipe = db.Column(db.String, nullable=False)
+
+    # Foreign key for relationship with User table
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'recipe': self.recipe,
+            "user_id": self.user_id
         }
         
 
