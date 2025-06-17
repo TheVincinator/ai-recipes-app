@@ -26,10 +26,8 @@ load_dotenv()
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# app.config['AI_API_KEY'] = os.getenv('AI_API_KEY')
-app.config['AI_API_KEY'] = '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'
-# app.config['AI_API_URL'] = os.getenv('AI_API_URL')
-app.config['AI_API_URL'] = 'https://router.huggingface.co/novita/v3/openai/chat/completions'
+app.config['AI_API_KEY'] = os.getenv('AI_API_KEY')
+app.config['AI_API_URL'] = os.getenv('AI_API_URL')
 
 # Initialize the database
 db.init_app(app)

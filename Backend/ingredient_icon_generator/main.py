@@ -12,9 +12,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3-spp.cfg')
 WEIGHTS_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3-spp.weights')
 CLASSES_FILE = os.path.join(BASE_DIR, 'object_detection/coco.names')
-PIXABAY_API_KEY = "29734759-0e8a108bda43f6ae4df7b6618"
 OUTPUT_FOLDER = os.path.join(BASE_DIR, "assets/ingredients/generated_images")
 FONT_FILE = os.path.join(BASE_DIR, "fonts/Roboto-VariableFont_wdth,wght.ttf")
+
+PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY")
 
 # Load YOLO
 net = cv2.dnn.readNetFromDarknet(CONFIG_FILE, WEIGHTS_FILE)
