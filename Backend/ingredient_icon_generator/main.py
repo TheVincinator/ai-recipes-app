@@ -6,6 +6,9 @@ from io import BytesIO
 import os
 from fuzzywuzzy import process
 import argparse
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
