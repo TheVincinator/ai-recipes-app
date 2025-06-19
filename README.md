@@ -10,6 +10,7 @@ Based on your ingredients and preferences, you can use AI to generate recipes an
 * Ingredient management: add, update, and remove ingredients
 * Allergy tracking: log dietary restrictions
 * AI-powered recipe generation via an external Hugging Face API
+* Recipe management: save recipes to your account on the backend, with optional local device saving
 
 ### 🖥️ Frontend Features
 
