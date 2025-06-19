@@ -21,8 +21,8 @@ Based on your ingredients and preferences, you can use AI to generate recipes an
 
 ### 🖼️ Ingredient Icon Generator
 
-The Ingredient Icon Generator is a feature of AI Recipes that creates 256×256 ingredient icons from user input, using either local assets or images fetched from the Pexels API. It uses YOLOv3 for object detection and `fuzzywuzzy` for typo-tolerant matching. If no relevant image is found, it gracefully falls back to generating labeled text icons.
-> ⚠️ **Note:** You must provide your own [Pexels API key](https://www.pexels.com/api/) by updating the `PEXELS_API_KEY` variable in `main.py`.
+The Ingredient Icon Generator is a feature of AI Recipes that creates 256×256 ingredient icons from user input, using either local assets or images fetched from the Pixabay API. It uses YOLOv3 for object detection and `fuzzywuzzy` for typo-tolerant matching. If no relevant image is found, it gracefully falls back to generating labeled text icons.
+> ⚠️ **Note:** You must provide your own [Pixabay API key](https://pixabay.com/service/about/api/) by updating the `PIXABAY_API_KEY` variable in `main.py`.
 
 <table>
   <tr>
