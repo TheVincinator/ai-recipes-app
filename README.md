@@ -13,16 +13,30 @@ Based on your ingredients and preferences, you can use AI to generate recipes an
 
 ### 🖥️ Frontend Features
 
-* Built on React using TailwindCSS
-* Newly designed UI for improved user experience
-* Search for ingredients and filter based on custom needs
-* Save recipes to local device and have the ability to rename them in app
+* Built with React and styled using TailwindCSS
+* Redesigned UI for a smoother and more intuitive user experience
+* Search and filter ingredients to quickly find what you need
+* Save recipes locally with the option to rename them within the app
 
 ### 🖼️ Ingredient Icon Generator
 
 The Ingredient Icon Generator is a feature of AI Recipes that creates 256×256 ingredient icons from user input, using either local assets or images fetched from the Pexels API. It uses YOLOv3 for object detection and `fuzzywuzzy` for typo-tolerant matching. If no relevant image is found, it gracefully falls back to generating labeled text icons.
 > ⚠️ **Note:** You must provide your own [Pexels API key](https://www.pexels.com/api/) by updating the `PEXELS_API_KEY` variable in `main.py`.
 
-<img width="314" alt="Screenshot 2025-05-02 at 11 54 50 PM" src="https://github.com/user-attachments/assets/1649baf9-7d36-46c8-bb68-6a4a64da16eb" />
-<img width="314" alt="Screenshot 2025-05-02 at 11 55 42 PM" src="https://github.com/user-attachments/assets/ecfb881d-9145-444a-b79d-5282efdab6d4" />
-<img width="301" alt="Screenshot 2025-05-03 at 12 46 16 AM" src="https://github.com/user-attachments/assets/c8f7f808-ecb4-45fa-9872-25ab94daabbe" />
+<table>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/c11a7eb9-1b1f-404e-9589-8c620350b069" alt="Login" width="300" style="border:1px solid #ccc; border-radius:6px; padding:4px;"></td>
+    <td><img src="https://github.com/user-attachments/assets/5b9331ce-d720-43bc-9de6-014d9889e086" alt="Create Account" width="300" style="border:1px solid #ccc; border-radius:6px; padding:4px;"></td>
+    <td><img src="https://github.com/user-attachments/assets/9729ecd0-4986-4c86-94ff-1a7a42424215" alt="Manage Ingredients" width="300" style="border:1px solid #ccc; border-radius:6px; padding:4px;"></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/18a5ff12-da31-44af-bdcd-d6cecb1c7626" alt="Allergies" width="300" style="border:1px solid #ccc; border-radius:6px; padding:4px;"></td>
+    <td><img src="https://github.com/user-attachments/assets/a1fee036-76a2-433b-903e-2c8ba99dd1ff" alt="Recipe Suggestions" width="300" style="border:1px solid #ccc; border-radius:6px; padding:4px;"></td>
+    <td><img src="https://github.com/user-attachments/assets/9c098480-cbb9-4d07-a70d-daef419fcd9b" alt="Saved Recipes" width="300" style="border:1px solid #ccc; border-radius:6px; padding:4px;"></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/56b44987-4931-466c-833f-6dd37a0cc865" alt="Saved Recipes - Drilled in" width="300" style="border:1px solid #ccc; border-radius:6px; padding:4px;"></td>
+    <td><img src="https://github.com/user-attachments/assets/e9c5d407-d89c-43b1-8805-6a5e8b5d5958" alt="Account Settings" width="300" style="border:1px solid #ccc; border-radius:6px; padding:4px;"></td>
+  </tr>
+</table>
+
