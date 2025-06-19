@@ -37,6 +37,7 @@ The Ingredient Icon Generator is a feature of AI Recipes that creates 256×256 i
   </tr>
   <tr>
     <td><img src="https://github.com/user-attachments/assets/56b44987-4931-466c-833f-6dd37a0cc865" alt="Saved Recipes - Drilled in" width="300" style="border:1px solid #ccc; border-radius:6px; padding:4px;"></td>
+    <td><img src="https://github.com/user-attachments/assets/a15e1e83-ab48-45b4-a6a2-00f29cac5716" alt="Saved Recipes - Rename Recipe" width="300" style="border:1px solid #ccc; border-radius:6px; padding:4px;"></td>
     <td><img src="https://github.com/user-attachments/assets/e9c5d407-d89c-43b1-8805-6a5e8b5d5958" alt="Account Settings" width="300" style="border:1px solid #ccc; border-radius:6px; padding:4px;"></td>
   </tr>
 </table>
