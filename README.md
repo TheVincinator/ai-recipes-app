@@ -13,10 +13,10 @@ Based on your ingredients and preferences, you can use AI to generate recipes an
 
 ### 🖥️ Frontend Features
 
-* Built on Kotlin with Jetpack Compose
-* OkHttp client with coroutines for fetching
-* Interactable chips with unique images and loading animations
-* NavWrapper controls the program flow
+* Built on React using TailwindCSS
+* Newly designed UI for improved user experience
+* Search for ingredients and filter based on custom needs
+* Save recipes to local device and have the ability to rename them in app
 
 ### 🖼️ Ingredient Icon Generator
 
