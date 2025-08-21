@@ -14,7 +14,7 @@ const SavedRecipes = ({ user }) => {
     async function fetchSavedRecipes() {
       try {
         setLoading(true);
-        const response = await fetch(`/api/users/${userId}/saved-recipes/`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/saved-recipes/`);
         const result = await response.json();
         if (result.success) {
           setRecipes(result.data || []);
@@ -49,7 +49,7 @@ const SavedRecipes = ({ user }) => {
       // Optimistic UI update: remove first
       setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
 
-      const response = await fetch(`/api/users/${userId}/saved-recipes/${recipeId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/saved-recipes/${recipeId}`, {
         method: "DELETE",
       });
       const result = await response.json();
@@ -61,7 +61,7 @@ const SavedRecipes = ({ user }) => {
       alert(`Error deleting recipe: ${err.message}`);
       // On error, refetch recipes to sync UI
       try {
-        const resp = await fetch(`/api/users/${userId}/saved-recipes/`);
+        const resp = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/saved-recipes/`);
         const resJson = await resp.json();
         if (resJson.success) setRecipes(resJson.data || []);
       } catch {
@@ -236,7 +236,7 @@ const SavedRecipes = ({ user }) => {
               onClick={async () => {
                 try {
                   const res = await fetch(
-                    `/api/users/${userId}/saved-recipes/${recipeBeingRenamed.id}`,
+                    `${process.env.REACT_APP_API_URL}/api/users/${userId}/saved-recipes/${recipeBeingRenamed.id}`,
                     {
                       method: "PUT",
                       headers: {
