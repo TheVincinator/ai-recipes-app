@@ -6,7 +6,7 @@ export function IngredientSearch({ user }) {
   const [results, setResults] = useState([]);
 
   const search = () => {
-    axios.get(`/api/users/${user.id}/ingredients/search/?q=${query}`)
+    axios.get(`${process.env.REACT_APP_API_URL}/api/users/${user.id}/ingredients/search/?q=${query}`)
       .then(res => setResults(res.data.data));
   };
 
