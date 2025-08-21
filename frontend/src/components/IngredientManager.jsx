@@ -19,7 +19,7 @@ function IngredientImage({ name, category }) {
     const formattedName = category
       ? `${name.toLowerCase()}_${category.toLowerCase()}`
       : name.toLowerCase();
-    return `/api/assets/ingredients/generated_images/${formattedName}?&t=${Date.now()}`;
+    return `${process.env.REACT_APP_API_URL}/api/assets/ingredients/generated_images/${formattedName}?&t=${Date.now()}`;
   };
   
 
@@ -88,7 +88,7 @@ function IngredientImage({ name, category }) {
       className="w-8 h-8 rounded-full object-cover border border-gray-300"
       onError={(e) => {
         e.target.onerror = null;
-        e.target.src = '/api/assets/ingredients/default_images/placeholder';
+        e.target.src = `${process.env.REACT_APP_API_URL}/api/assets/ingredients/default_images/placeholder`;
       }}
     />
   );
@@ -154,7 +154,7 @@ export default function IngredientManager({ user }) {
       if (searchDebounced) queryParams.append('q', searchDebounced);
       if (categoryFilterDebounced) queryParams.append('category', categoryFilterDebounced);
 
-      const res = await axios.get(`/api/users/${user.id}/ingredients/search/?${queryParams}`);
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/users/${user.id}/ingredients/search/?${queryParams}`);
       setIngredients(res.data.data);
     } catch (error) {
       console.error('Error fetching ingredients:', error);
@@ -195,7 +195,7 @@ export default function IngredientManager({ user }) {
       quantity: form.quantity ? parseFloat(form.quantity) : null,
     };
 
-    fetch(`/api/users/${user.id}/ingredients/`, {
+    fetch(`${process.env.REACT_APP_API_URL}/api/users/${user.id}/ingredients/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(ingredientData),
@@ -222,7 +222,7 @@ export default function IngredientManager({ user }) {
   
   const handleUpdate = async (updatedIngredient) => {
     try {
-      const res = await fetch(`/api/users/${user.id}/ingredients/${updatedIngredient.id}/`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${user.id}/ingredients/${updatedIngredient.id}/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedIngredient),
@@ -242,7 +242,7 @@ export default function IngredientManager({ user }) {
   const removeIngredient = async (id) => {
     if (!window.confirm("Are you sure you want to delete this ingredient?")) return;
     try {
-      await axios.delete(`/api/users/${user.id}/ingredients/${id}/`);
+      await axios.delete(`${process.env.REACT_APP_API_URL}/api/users/${user.id}/ingredients/${id}/`);
       setIngredients((prev) => prev.filter(ing => ing.id !== id));
     } catch (error) {
       console.error('Error deleting ingredient:', error);
@@ -382,12 +382,12 @@ export default function IngredientManager({ user }) {
             <div className="flex items-center gap-3">
             {ingredientOptions.map(name => name.toLowerCase()).includes(ingredient.name.toLowerCase()) ? (
               <img
-                src={`/api/assets/ingredients/default_images/${ingredient.name.toLowerCase()}`}
+                src={`${process.env.REACT_APP_API_URL}/api/assets/ingredients/default_images/${ingredient.name.toLowerCase()}`}
                 alt={ingredient.name}
                 className="w-8 h-8 rounded-full object-cover border border-gray-300"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = '/api/assets/ingredients/default_images/placeholder';
+                  e.target.src = `${process.env.REACT_APP_API_URL}/api/assets/ingredients/default_images/placeholder`;
                 }}
               />
             ) : (
