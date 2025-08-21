@@ -23,7 +23,7 @@ const AccountSettings = ({ user, onLogout }) => {
     setError('');
     setLoading(true);
     try {
-      await axios.put(`/api/users/${user.id}/`, form);
+      await axios.put(`${process.env.REACT_APP_API_URL}/api/users/${user.id}/`, form);
       setMessage('User updated successfully');
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Update failed');
@@ -36,7 +36,7 @@ const AccountSettings = ({ user, onLogout }) => {
     setError('');
     setLoading(true);
     try {
-      await axios.delete(`/api/users/${user.id}/`);
+      await axios.delete(`${process.env.REACT_APP_API_URL}/api/users/${user.id}/`);
       setShowConfirmDelete(false);
       setShowDeleteModal(true);
     } catch (err) {
