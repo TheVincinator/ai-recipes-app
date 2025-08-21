@@ -23,7 +23,7 @@ PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY")
 # --- Download YOLO weights from S3 if not present ---
 if not os.path.exists(WEIGHTS_FILE):
     os.makedirs(os.path.dirname(WEIGHTS_FILE), exist_ok=True)
-    s3_url = "https://ai-recipes-backend-models.s3.us-east-2.amazonaws.com/yolov3-spp.weights"  # Replace with your S3 URL
+    s3_url = "https://ai-recipes-backend-models.s3.us-east-2.amazonaws.com/yolov3.weights"
     r = requests.get(s3_url, stream=True)
     with open(WEIGHTS_FILE, "wb") as f:
         for chunk in r.iter_content(chunk_size=8192):
