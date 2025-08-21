@@ -28,7 +28,7 @@ const RecipeSuggestions = ({ userId }) => {
 
     try {
       const response = await fetch(
-        `/api/users/${userId}/recipe-suggestions/?${params.toString()}`
+        `${process.env.REACT_APP_API_URL}/api/users/${userId}/recipe-suggestions/?${params.toString()}`
       );
       const result = await response.json();
 
@@ -167,7 +167,7 @@ const RecipeSuggestions = ({ userId }) => {
               <button
                 onClick={async () => {
                   try {
-                    const response = await fetch(`/api/users/${userId}/saved-recipes/`, {
+                    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/saved-recipes/`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
