@@ -13,21 +13,12 @@ load_dotenv()
 
 # Config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3.pt')
+MODEL_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3-tiny.pt')
 CLASSES_FILE = os.path.join(BASE_DIR, 'object_detection/coco.names')
 OUTPUT_FOLDER = os.path.join(BASE_DIR, "assets/ingredients/generated_images")
 FONT_FILE = os.path.join(BASE_DIR, "fonts/Roboto-VariableFont_wdth,wght.ttf")
 
 PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY")
-
-# Download .pt model from S3 if missing
-if not os.path.exists(MODEL_FILE):
-    os.makedirs(os.path.dirname(MODEL_FILE), exist_ok=True)
-    s3_url = "https://ai-recipes-backend-models.s3.us-east-2.amazonaws.com/yolov3.pt"
-    r = requests.get(s3_url, stream=True)
-    with open(MODEL_FILE, "wb") as f:
-        for chunk in r.iter_content(chunk_size=8192):
-            f.write(chunk)
 
 # Load YOLO
 net = YOLO(MODEL_FILE)
