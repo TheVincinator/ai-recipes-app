@@ -15,7 +15,7 @@ function AllergyImage({ name, category }) {
     const formattedName = category?.trim()
       ? `${name.trim().toLowerCase()}_${category.trim().toLowerCase()}`
       : name.trim().toLowerCase();
-    return `/api/assets/allergies/generated_images/${formattedName}?&t=${Date.now()}`;
+    return `${process.env.REACT_APP_API_URL}/api/assets/allergies/generated_images/${formattedName}?&t=${Date.now()}`;
   };
   
 
@@ -84,7 +84,7 @@ function AllergyImage({ name, category }) {
       className="w-8 h-8 rounded-full object-cover border border-gray-300"
       onError={(e) => {
         e.target.onerror = null;
-        e.target.src = '/api/assets/allergies/default_images/placeholder';
+        e.target.src = `${process.env.REACT_APP_API_URL}/api/assets/allergies/default_images/placeholder`;
       }}
     />
   );
@@ -108,7 +108,7 @@ export default function AllergyManager({ userId }) {
 
   // Fetch allergies for the user
   useEffect(() => {
-    fetch(`/api/users/${userId}/allergies/`)
+    fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/allergies/`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -153,7 +153,7 @@ export default function AllergyManager({ userId }) {
       allergy_category: allergyCategory,
     };
 
-    fetch(`/api/users/${userId}/allergies/`, {
+    fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/allergies/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(allergyData),
@@ -184,7 +184,7 @@ export default function AllergyManager({ userId }) {
     );
   
     // Optionally send PATCH to backend to persist changes
-    fetch(`/api/users/${userId}/allergies/${updatedAllergy.id}/`, {
+    fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/allergies/${updatedAllergy.id}/`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -209,7 +209,7 @@ export default function AllergyManager({ userId }) {
   const deleteAllergy = async (id) => {
     if (!window.confirm("Are you sure you want to delete this allergy?")) return;
     try {
-      await axios.delete(`/api/users/${userId}/allergies/${id}/`);
+      await axios.delete(`${process.env.REACT_APP_API_URL}/api/users/${userId}/allergies/${id}/`);
       setAllergies((prev) => prev.filter(ing => ing.id !== id));
     } catch (error) {
       console.error('Error deleting allergy:', error);
@@ -278,12 +278,12 @@ export default function AllergyManager({ userId }) {
             <div className="flex items-center gap-3">
             {commonAllergies.map(allergy_name => allergy_name.toLowerCase()).includes(allergy.allergy_name.toLowerCase()) ? (
               <img
-                src={`/api/assets/allergies/default_images/${allergy.allergy_name.toLowerCase()}`}
+                src={`${process.env.REACT_APP_API_URL}/api/assets/allergies/default_images/${allergy.allergy_name.toLowerCase()}`}
                 alt={allergy.allergy_name}
                 className="w-8 h-8 rounded-full object-cover border border-gray-300"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = '/api/assets/allergies/default_images/placeholder';
+                  e.target.src = `${process.env.REACT_APP_API_URL}/api/assets/allergies/default_images/placeholder`;
                 }}
               />
             ) : (
