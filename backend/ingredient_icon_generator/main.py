@@ -12,8 +12,8 @@ load_dotenv()
 
 # Config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3-spp.cfg')
-WEIGHTS_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3-spp.weights')
+CONFIG_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3.cfg')
+WEIGHTS_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3.weights')
 CLASSES_FILE = os.path.join(BASE_DIR, 'object_detection/coco.names')
 OUTPUT_FOLDER = os.path.join(BASE_DIR, "assets/ingredients/generated_images")
 FONT_FILE = os.path.join(BASE_DIR, "fonts/Roboto-VariableFont_wdth,wght.ttf")
