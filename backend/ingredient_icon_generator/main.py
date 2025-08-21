@@ -1,3 +1,4 @@
+from ultralytics import YOLO
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -12,27 +13,24 @@ load_dotenv()
 
 # Config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3.cfg')
-WEIGHTS_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3.weights')
+MODEL_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3.pt')
 CLASSES_FILE = os.path.join(BASE_DIR, 'object_detection/coco.names')
 OUTPUT_FOLDER = os.path.join(BASE_DIR, "assets/ingredients/generated_images")
 FONT_FILE = os.path.join(BASE_DIR, "fonts/Roboto-VariableFont_wdth,wght.ttf")
 
 PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY")
 
-# --- Download YOLO weights from S3 if not present ---
-if not os.path.exists(WEIGHTS_FILE):
-    os.makedirs(os.path.dirname(WEIGHTS_FILE), exist_ok=True)
-    s3_url = "https://ai-recipes-backend-models.s3.us-east-2.amazonaws.com/yolov3.weights"
+# Download .pt model from S3 if missing
+if not os.path.exists(MODEL_FILE):
+    os.makedirs(os.path.dirname(MODEL_FILE), exist_ok=True)
+    s3_url = "https://ai-recipes-backend-models.s3.us-east-2.amazonaws.com/yolov3.pt"
     r = requests.get(s3_url, stream=True)
-    with open(WEIGHTS_FILE, "wb") as f:
+    with open(MODEL_FILE, "wb") as f:
         for chunk in r.iter_content(chunk_size=8192):
             f.write(chunk)
 
 # Load YOLO
-net = cv2.dnn.readNetFromDarknet(CONFIG_FILE, WEIGHTS_FILE)
-layer_names = net.getLayerNames()
-output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
+net = YOLO(MODEL_FILE)
 
 # Load classes
 with open(CLASSES_FILE, 'r') as f:
@@ -63,56 +61,26 @@ def get_pixabay_image(query, category, api_key):
         return None
 
 
-def detect_objects(image_url, user_input):
-    """
-    Detect objects matching the user input in an image.
-    """
+def detect_objects_ultralytics(image_url, user_input):
     response = requests.get(image_url)
     pil_image = Image.open(BytesIO(response.content)).convert("RGB")
-    img = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+    img_np = np.array(pil_image)
 
-    blob = cv2.dnn.blobFromImage(img, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
-    net.setInput(blob)
-
-    outs = net.forward(output_layers)
-
-    class_ids = []
-    confidences = []
+    results = net.predict(img_np, verbose=False)  # Ultralytics predicts on the image
     boxes = []
-    height, width, _ = img.shape
+    confidences = []
+    class_ids = []
 
-    for out in outs:
-        for detection in out:
-            scores = detection[5:]
-            class_id = np.argmax(scores)
-            confidence = scores[class_id]
-            
-            if confidence > 0.5 and classes[class_id].lower() == user_input.lower():
-                center_x = int(detection[0] * width)
-                center_y = int(detection[1] * height)
-                w = int(detection[2] * width)
-                h = int(detection[3] * height)
+    for r in results:  # results is a list of detections
+        for box in r.boxes:  # r.boxes contains the detected bounding boxes
+            cls_id = int(box.cls[0])
+            score = float(box.conf[0])
+            x1, y1, x2, y2 = box.xyxy[0].tolist()  # get bounding box
+            boxes.append([x1, y1, x2 - x1, y2 - y1])  # convert to [x, y, w, h]
+            confidences.append(score)
+            class_ids.append(cls_id)
 
-                x = int(center_x - w / 2)
-                y = int(center_y - h / 2)
-
-                boxes.append([x, y, w, h])
-                confidences.append(float(confidence))
-                class_ids.append(class_id)
-
-    indices = cv2.dnn.NMSBoxes(boxes, confidences, score_threshold=0.5, nms_threshold=0.4)
-
-    filtered_boxes = []
-    filtered_confidences = []
-    filtered_class_ids = []
-
-    for i in indices:
-        i = i[0] if isinstance(i, (list, tuple, np.ndarray)) else i
-        filtered_boxes.append(boxes[i])
-        filtered_confidences.append(confidences[i])
-        filtered_class_ids.append(class_ids[i])
-
-    return filtered_boxes, filtered_confidences, filtered_class_ids, pil_image
+    return boxes, confidences, class_ids, pil_image
 
 
 def create_icons_no_url(text, size):
@@ -207,7 +175,7 @@ def fetch_or_create_icon(keyword, category, size):
     if not image_url:
         return create_icons_no_url(keyword, size)
 
-    boxes, confidences, _, pil_image = detect_objects(image_url, keyword)
+    boxes, confidences, _, pil_image = detect_objects_ultralytics(image_url, keyword)
 
     if len(boxes) == 0:
         return create_icons_empty_boxes(size, pil_image)
@@ -254,7 +222,7 @@ def main():
     Main entry point for generating ingredient icons based on user input.
 
     Sets up argument parsing to receive the ingredient query and a unique ID for the query's textbox.
-    Then, it calls the `user_input_flow` function to process the user input and save the generated icon.
+    Then, it calls the user_input_flow function to process the user input and save the generated icon.
     """
     parser = argparse.ArgumentParser(description="Generate ingredient icons based on user input.")
     parser.add_argument('user_input', type=str, help="The ingredient name or query.")
