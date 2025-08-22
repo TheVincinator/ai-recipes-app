@@ -18,16 +18,12 @@ allergyOptions = ["peanuts", "tree nuts", "milk", "eggs", "wheat", "soy", "fish"
 
 app = Flask(__name__)
 
-CORS(app, resources={
-    r"/api/*": {
-        "origins": [
-            "https://ai-recipes-app-amber.vercel.app",  # Vercel frontend
-            "http://localhost:3000"                     # Local dev
-        ],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+app.url_map.strict_slashes = False
+
+CORS(app, origins=[
+    "https://ai-recipes-app-amber.vercel.app",
+    "http://localhost:3000"
+])
 
 # Config
 load_dotenv() 
@@ -53,7 +49,6 @@ def success_response(data, code=200):
 
 
 # User Routes
-@app.route('/api/users', methods=['POST'])
 @app.route('/api/users/', methods=['POST'])
 def create_user():
     body = json.loads(request.data)
@@ -79,7 +74,6 @@ def create_user():
     return success_response(new_user.to_dict(), 201)
 
 
-@app.route('/api/users/<int:user_id>')
 @app.route('/api/users/<int:user_id>/')
 def get_user(user_id):
     user = User.query.get(user_id)
@@ -90,7 +84,6 @@ def get_user(user_id):
     return success_response(user.to_dict())
 
 
-@app.route('/api/users/<int:user_id>', methods=['PUT'])
 @app.route('/api/users/<int:user_id>/', methods=['PUT'])
 def update_user(user_id):
     user = User.query.get(user_id)
@@ -119,7 +112,6 @@ def update_user(user_id):
     return success_response(user.to_dict())
 
 
-@app.route('/api/users/<int:user_id>', methods=['DELETE'])
 @app.route('/api/users/<int:user_id>/', methods=['DELETE'])
 def delete_user(user_id):
     user = User.query.get(user_id)
@@ -172,7 +164,6 @@ def delete_user(user_id):
 
 
 #accepts json format of an allergy that the user may have
-@app.route('/api/users/<int:user_id>/allergies', methods=['POST'])
 @app.route('/api/users/<int:user_id>/allergies/', methods=['POST'])
 def add_allergy_for_user(user_id):
     user = User.query.get(user_id)
@@ -220,7 +211,6 @@ def add_allergy_for_user(user_id):
     return success_response(new_allergy.to_dict(), 201)
     
 
-@app.route('/api/users/<int:user_id>/allergies/<int:allergy_id>', methods=['PUT'])
 @app.route('/api/users/<int:user_id>/allergies/<int:allergy_id>/', methods=['PUT'])
 def update_allergy_for_user(user_id, allergy_id):
     user = User.query.get(user_id)
@@ -289,7 +279,6 @@ def update_allergy_for_user(user_id, allergy_id):
     return success_response(allergy.to_dict())
 
 
-@app.route('/api/users/<int:user_id>/allergies/<int:allergy_id>', methods=['DELETE'])
 @app.route('/api/users/<int:user_id>/allergies/<int:allergy_id>/', methods=['DELETE'])
 def delete_allergy_for_user(user_id, allergy_id):
     user = User.query.get(user_id)
@@ -338,7 +327,6 @@ def delete_allergy_for_user(user_id, allergy_id):
     return success_response(allergy.to_dict())
 
 
-@app.route('/api/users/<int:user_id>/allergies')
 @app.route('/api/users/<int:user_id>/allergies/')
 def get_allergies_for_user(user_id):
     user = User.query.get(user_id)
@@ -350,7 +338,6 @@ def get_allergies_for_user(user_id):
 
 
 # Ingredient Routes
-@app.route('/api/users/<int:user_id>/ingredients', methods=['POST'])
 @app.route('/api/users/<int:user_id>/ingredients/', methods=['POST'])
 def add_ingredient(user_id):
     user = User.query.get(user_id)
@@ -402,7 +389,6 @@ def add_ingredient(user_id):
     return success_response(new_ingredient.to_dict(), 201)
 
 
-@app.route('/api/users/<int:user_id>/ingredients')
 @app.route('/api/users/<int:user_id>/ingredients/')
 def get_user_ingredients(user_id):
     if User.query.get(user_id) is None:    # Check if user exists
@@ -412,7 +398,6 @@ def get_user_ingredients(user_id):
     return success_response([ingredient.to_dict() for ingredient in ingredients])
 
 
-@app.route('/api/users/<int:user_id>/ingredients/<int:ingredient_id>')
 @app.route('/api/users/<int:user_id>/ingredients/<int:ingredient_id>/')
 def get_ingredient(user_id, ingredient_id):
     ingredient = Ingredient.query.filter_by(id=ingredient_id, user_id=user_id).first()
@@ -423,7 +408,6 @@ def get_ingredient(user_id, ingredient_id):
     return success_response(ingredient.to_dict())
 
 
-@app.route('/api/users/<int:user_id>/ingredients/<int:ingredient_id>', methods=['PUT'])
 @app.route('/api/users/<int:user_id>/ingredients/<int:ingredient_id>/', methods=['PUT'])
 def update_ingredient(user_id, ingredient_id):
     user = User.query.get(user_id)
@@ -494,7 +478,6 @@ def update_ingredient(user_id, ingredient_id):
     return success_response(ingredient.to_dict(), 200)
 
 
-@app.route('/api/users/<int:user_id>/ingredients/<int:ingredient_id>', methods=['DELETE'])
 @app.route('/api/users/<int:user_id>/ingredients/<int:ingredient_id>/', methods=['DELETE'])
 def delete_ingredient(user_id, ingredient_id):
     user = User.query.get(user_id)
@@ -544,14 +527,12 @@ def delete_ingredient(user_id, ingredient_id):
 
 
 @app.route('/api/assets/ingredients/default_images/<string:name>')
-@app.route('/api/assets/ingredients/default_images/<string:name>/')
 def get_ingredient_default_image_by_name(name):
     filename = name.lower() + '.jpg'
     return send_from_directory('ingredient_icon_generator/assets/ingredients/default_images', filename)
 
 
 @app.route('/api/assets/ingredients/generated_images/<string:combined>')
-@app.route('/api/assets/ingredients/generated_images/<string:combined>/')
 def get_ingredient_generated_image_by_name(combined):
     filename = f"{combined}.png"
     path = os.path.join('ingredient_icon_generator', 'assets', 'ingredients', 'generated_images', filename)
@@ -569,14 +550,12 @@ def get_ingredient_generated_image_by_name(combined):
     )
 
 @app.route('/api/assets/allergies/default_images/<string:name>')
-@app.route('/api/assets/allergies/default_images/<string:name>/')
 def get_allergy_default_image_by_name(name):
     filename = name.lower() + '.jpg'
     return send_from_directory('ingredient_icon_generator/assets/allergies/default_images', filename)
 
 
 @app.route('/api/assets/allergies/generated_images/<string:combined>')
-@app.route('/api/assets/allergies/generated_images/<string:combined>/')
 def get_allergy_generated_image_by_name(combined):
     filename = f"{combined}.png"
     path = os.path.join('ingredient_icon_generator', 'assets', 'allergies', 'generated_images', filename)
@@ -595,7 +574,6 @@ def get_allergy_generated_image_by_name(combined):
 
 
 # Search Route
-@app.route('/api/users/<int:user_id>/ingredients/search')
 @app.route('/api/users/<int:user_id>/ingredients/search/')
 def search_ingredients(user_id):
     if User.query.get(user_id) is None:    # Check if user exists
@@ -617,7 +595,6 @@ def search_ingredients(user_id):
 
 
 # Authentication Route
-@app.route('/api/auth/login', methods=['POST'])
 @app.route('/api/auth/login/', methods=['POST'])
 def login():
     body = json.loads(request.data)
@@ -634,7 +611,6 @@ def login():
     return success_response({'message': 'Login successful', 'user': user.to_dict()})
 
 
-@app.route('/api/auth/logout', methods=['POST'])
 @app.route('/api/auth/logout/', methods=['POST'])
 def logout():
     # If using sessions, you'd clear the session here.
@@ -643,7 +619,6 @@ def logout():
 
 
 # Recipe suggestion route using AI
-@app.route('/api/users/<int:user_id>/recipe-suggestions')
 @app.route('/api/users/<int:user_id>/recipe-suggestions/')
 def get_recipe_suggestions(user_id):
     user = User.query.get(user_id)
@@ -745,7 +720,6 @@ def build_recipe_prompt(ingredients, allergies, meal_type=None, cuisine=None, di
     return prompt
 
 
-@app.route('/api/users/<int:user_id>/saved-recipes')
 @app.route('/api/users/<int:user_id>/saved-recipes/')
 def get_recipes(user_id):
     if User.query.get(user_id) is None:
@@ -756,7 +730,6 @@ def get_recipes(user_id):
     return success_response([recipe.to_dict() for recipe in recipes])
 
 
-@app.route('/api/users/<int:user_id>/saved-recipes', methods=['POST'])
 @app.route('/api/users/<int:user_id>/saved-recipes/', methods=['POST'])
 def save_recipe(user_id):
     user = User.query.get(user_id)
@@ -785,7 +758,6 @@ def save_recipe(user_id):
 
 
 @app.route('/api/users/<int:user_id>/saved-recipes/<int:recipe_id>', methods=['PUT'])
-@app.route('/api/users/<int:user_id>/saved-recipes/<int:recipe_id>/', methods=['PUT'])
 def rename_recipe(user_id, recipe_id):
     user = User.query.get(user_id)
     if not user:
@@ -804,7 +776,6 @@ def rename_recipe(user_id, recipe_id):
     return success_response(recipe.to_dict())
 
 
-@app.route('/api/users/<int:user_id>/saved-recipes/<int:recipe_id>', methods=['DELETE'])
 @app.route('/api/users/<int:user_id>/saved-recipes/<int:recipe_id>/', methods=['DELETE'])
 def delete_recipe(user_id, recipe_id):
     user = User.query.get(user_id)
