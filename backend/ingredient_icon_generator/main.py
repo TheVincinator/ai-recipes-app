@@ -1,5 +1,4 @@
 from ultralytics import YOLO
-import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import requests
@@ -13,7 +12,7 @@ load_dotenv()
 
 # Config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3-tiny.pt')
+MODEL_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3-tinyu.pt')
 CLASSES_FILE = os.path.join(BASE_DIR, 'object_detection/coco.names')
 OUTPUT_FOLDER = os.path.join(BASE_DIR, "assets/ingredients/generated_images")
 FONT_FILE = os.path.join(BASE_DIR, "fonts/Roboto-VariableFont_wdth,wght.ttf")
@@ -53,6 +52,9 @@ def get_pixabay_image(query, category, api_key):
 
 
 def detect_objects_ultralytics(image_url, user_input):
+    """
+    Detect objects in the image that match the user_input, using Ultralytics YOLO.
+    """
     response = requests.get(image_url)
     pil_image = Image.open(BytesIO(response.content)).convert("RGB")
     img_np = np.array(pil_image)
@@ -66,10 +68,13 @@ def detect_objects_ultralytics(image_url, user_input):
         for box in r.boxes:  # r.boxes contains the detected bounding boxes
             cls_id = int(box.cls[0])
             score = float(box.conf[0])
-            x1, y1, x2, y2 = box.xyxy[0].tolist()  # get bounding box
-            boxes.append([x1, y1, x2 - x1, y2 - y1])  # convert to [x, y, w, h]
-            confidences.append(score)
-            class_ids.append(cls_id)
+
+            # --- FILTER BY CONFIDENCE AND USER INPUT ---
+            if score > 0.5 and classes[cls_id].lower() == user_input.lower():
+                x1, y1, x2, y2 = box.xyxy[0].tolist()  # get bounding box
+                boxes.append([x1, y1, x2 - x1, y2 - y1])  # convert to [x, y, w, h]
+                confidences.append(score)
+                class_ids.append(cls_id)
 
     return boxes, confidences, class_ids, pil_image
 
