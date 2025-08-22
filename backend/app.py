@@ -18,7 +18,15 @@ allergyOptions = ["peanuts", "tree nuts", "milk", "eggs", "wheat", "soy", "fish"
 
 app = Flask(__name__)
 
-CORS(app)
+# ✅ Allow requests only from your frontend on Vercel and localhost for dev
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "https://ai-recipes-app-amber.vercel.app",  # your Vercel frontend
+            "http://localhost:3000"                     # local dev
+        ]
+    }
+})
 
 # Config
 load_dotenv() 
