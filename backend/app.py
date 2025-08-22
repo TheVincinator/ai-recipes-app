@@ -52,6 +52,11 @@ def success_response(data, code=200):
     return json.dumps({"success": True, "data": data}), code
 
 
+@app.route("/ping")
+def ping():
+    return {"status": "ok"}
+
+
 # User Routes
 @app.route('/api/users/', methods=['POST'])
 def create_user():
