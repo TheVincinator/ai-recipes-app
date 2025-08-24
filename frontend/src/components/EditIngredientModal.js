@@ -86,7 +86,7 @@ export default function EditIngredientModal({ isOpen, onClose, ingredient, onSav
           <div>
           <input
             list="name"
-            placeholder="Allergy name"
+            placeholder="Ingredient name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="border p-2 rounded w-full"
