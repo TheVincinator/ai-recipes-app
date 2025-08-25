@@ -13,7 +13,7 @@ from ingredient_icon_generator.allergy_icon_utils import allergy_async_generate_
 from ingredient_icon_locks import INGREDIENT_ICON_LOCKS
 from allergy_icon_locks import ALLERGY_ICON_LOCKS
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 ingredientOptions = ["beans", "beef", "butter", "cheese", "chicken", "eggs", "fish", "flour", "garlic", "herbs", "milk", "oil", "onions", "pepper", "pork", "rice", "salt", "sugar", "tomatoes", "vinegar", "water"]
@@ -45,18 +45,18 @@ with app.app_context():
 
 
 def failure_response(message, code=404):
-    return json.dumps({"error": message}), code
+    return json.dumps({"error": message}), code, {'Content-Type': 'application/json'}
 
 
 def success_response(data, code=200):
-    return json.dumps({"success": True, "data": data}), code
+    return json.dumps({"success": True, "data": data}), code, {'Content-Type': 'application/json'}
 
 
 def generate_token(user_id):
     payload = {
         'user_id': user_id,
-        'exp': datetime.now(datetime.timezone.utc) + timedelta(hours=24),
-        'iat': datetime.now(datetime.timezone.utc)
+        'exp': datetime.now(timezone.utc) + timedelta(hours=24),
+        'iat': datetime.now(timezone.utc)
     }
     return jwt.encode(payload, app.config['JWT_SECRET_KEY'], algorithm='HS256')
 
@@ -113,7 +113,11 @@ def create_user():
     db.session.add(new_user)
     db.session.commit()
     
-    return success_response(new_user.to_dict(), 201)
+    token = generate_token(new_user.id)
+    return success_response({
+        'token': token,
+        'user': new_user.to_dict()
+    }, 201)
 
 
 @app.route('/api/users/<int:user_id>/')

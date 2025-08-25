@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../axios';
 import React, { useState } from 'react';
 
 export function IngredientSearch({ user }) {
@@ -6,7 +6,7 @@ export function IngredientSearch({ user }) {
   const [results, setResults] = useState([]);
 
   const search = () => {
-    axios.get(`${process.env.REACT_APP_API_URL}/api/users/${user.id}/ingredients/search/?q=${query}`)
+    api.get(`/api/users/${user.id}/ingredients/search/?q=${query}`)
       .then(res => setResults(res.data.data));
   };
 

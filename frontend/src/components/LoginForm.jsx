@@ -14,7 +14,9 @@ const LoginForm = ({ onLogin }) => {
     setError('');
     try {
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/login/`, form);
-      onLogin(response.data.data.user);
+      const { token, user } = response.data.data;
+      localStorage.setItem('token', token);
+      onLogin(user);
     } catch (err) {
       setError('Invalid username or password');
     }
