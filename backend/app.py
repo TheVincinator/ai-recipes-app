@@ -1,4 +1,4 @@
-from flask import Flask, request, current_app
+from flask import Flask, request, current_app, jsonify
 from db import db, User, Ingredient, Allergy, Recipe
 from werkzeug.security import generate_password_hash, check_password_hash
 import requests
@@ -12,6 +12,9 @@ from ingredient_icon_generator.ingredient_icon_utils import ingredient_async_gen
 from ingredient_icon_generator.allergy_icon_utils import allergy_async_generate_icon
 from ingredient_icon_locks import INGREDIENT_ICON_LOCKS
 from allergy_icon_locks import ALLERGY_ICON_LOCKS
+import jwt
+from datetime import datetime, timedelta
+from functools import wraps
 
 ingredientOptions = ["beans", "beef", "butter", "cheese", "chicken", "eggs", "fish", "flour", "garlic", "herbs", "milk", "oil", "onions", "pepper", "pork", "rice", "salt", "sugar", "tomatoes", "vinegar", "water"]
 allergyOptions = ["peanuts", "tree nuts", "milk", "eggs", "wheat", "soy", "fish", "shellfish"]
@@ -33,6 +36,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 app.config['AI_API_KEY'] = os.getenv('AI_API_KEY')
 app.config['AI_API_URL'] = os.getenv('AI_API_URL')
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # Initialize the database
 db.init_app(app)
@@ -46,6 +50,44 @@ def failure_response(message, code=404):
 
 def success_response(data, code=200):
     return json.dumps({"success": True, "data": data}), code
+
+
+def generate_token(user_id):
+    payload = {
+        'user_id': user_id,
+        'exp': datetime.now(datetime.timezone.utc) + timedelta(hours=24),
+        'iat': datetime.now(datetime.timezone.utc)
+    }
+    return jwt.encode(payload, app.config['JWT_SECRET_KEY'], algorithm='HS256')
+
+
+def verify_token(token):
+    try:
+        payload = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
+        return payload['user_id']
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+
+def token_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        
+        if not token:
+            return failure_response('Token is missing', 401)
+        
+        if token.startswith('Bearer '):
+            token = token[7:]
+        
+        user_id = verify_token(token)
+        if user_id is None:
+            return failure_response('Invalid or expired token', 401)
+        
+        return f(user_id, *args, **kwargs)
+    return decorated_function
 
 
 # User Routes
@@ -75,7 +117,11 @@ def create_user():
 
 
 @app.route('/api/users/<int:user_id>/')
-def get_user(user_id):
+@token_required
+def get_user(current_user_id, user_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
 
     if user is None:
@@ -85,7 +131,11 @@ def get_user(user_id):
 
 
 @app.route('/api/users/<int:user_id>/', methods=['PUT'])
-def update_user(user_id):
+@token_required
+def update_user(current_user_id, user_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
 
     if user is None:
@@ -113,7 +163,11 @@ def update_user(user_id):
 
 
 @app.route('/api/users/<int:user_id>/', methods=['DELETE'])
-def delete_user(user_id):
+@token_required
+def delete_user(current_user_id, user_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
 
     if user is None:
@@ -165,7 +219,11 @@ def delete_user(user_id):
 
 #accepts json format of an allergy that the user may have
 @app.route('/api/users/<int:user_id>/allergies/', methods=['POST'])
-def add_allergy_for_user(user_id):
+@token_required
+def add_allergy_for_user(current_user_id, user_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
     if user is None:
         return failure_response("User not found")
@@ -212,7 +270,11 @@ def add_allergy_for_user(user_id):
     
 
 @app.route('/api/users/<int:user_id>/allergies/<int:allergy_id>/', methods=['PUT'])
-def update_allergy_for_user(user_id, allergy_id):
+@token_required
+def update_allergy_for_user(current_user_id, user_id, allergy_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
     if user is None:
         return failure_response("User not found")
@@ -280,7 +342,11 @@ def update_allergy_for_user(user_id, allergy_id):
 
 
 @app.route('/api/users/<int:user_id>/allergies/<int:allergy_id>/', methods=['DELETE'])
-def delete_allergy_for_user(user_id, allergy_id):
+@token_required
+def delete_allergy_for_user(current_user_id, user_id, allergy_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
     if user is None:
         return failure_response("User not found")
@@ -328,7 +394,11 @@ def delete_allergy_for_user(user_id, allergy_id):
 
 
 @app.route('/api/users/<int:user_id>/allergies/')
-def get_allergies_for_user(user_id):
+@token_required
+def get_allergies_for_user(current_user_id, user_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
     if not user:
         return success_response('User not found')
@@ -339,7 +409,11 @@ def get_allergies_for_user(user_id):
 
 # Ingredient Routes
 @app.route('/api/users/<int:user_id>/ingredients/', methods=['POST'])
-def add_ingredient(user_id):
+@token_required
+def add_ingredient(current_user_id, user_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
 
     if user is None:
@@ -390,7 +464,11 @@ def add_ingredient(user_id):
 
 
 @app.route('/api/users/<int:user_id>/ingredients/')
-def get_user_ingredients(user_id):
+@token_required
+def get_user_ingredients(current_user_id, user_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     if User.query.get(user_id) is None:    # Check if user exists
         return failure_response("User not found")
     
@@ -399,7 +477,11 @@ def get_user_ingredients(user_id):
 
 
 @app.route('/api/users/<int:user_id>/ingredients/<int:ingredient_id>/')
-def get_ingredient(user_id, ingredient_id):
+@token_required
+def get_ingredient(current_user_id, user_id, ingredient_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     ingredient = Ingredient.query.filter_by(id=ingredient_id, user_id=user_id).first()
 
     if ingredient is None:
@@ -409,7 +491,11 @@ def get_ingredient(user_id, ingredient_id):
 
 
 @app.route('/api/users/<int:user_id>/ingredients/<int:ingredient_id>/', methods=['PUT'])
-def update_ingredient(user_id, ingredient_id):
+@token_required
+def update_ingredient(current_user_id, user_id, ingredient_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
     if user is None:
         return failure_response("User not found")
@@ -479,7 +565,11 @@ def update_ingredient(user_id, ingredient_id):
 
 
 @app.route('/api/users/<int:user_id>/ingredients/<int:ingredient_id>/', methods=['DELETE'])
-def delete_ingredient(user_id, ingredient_id):
+@token_required
+def delete_ingredient(current_user_id, user_id, ingredient_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
     if user is None:
         return failure_response("User not found")
@@ -575,7 +665,11 @@ def get_allergy_generated_image_by_name(combined):
 
 # Search Route
 @app.route('/api/users/<int:user_id>/ingredients/search/')
-def search_ingredients(user_id):
+@token_required
+def search_ingredients(current_user_id, user_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     if User.query.get(user_id) is None:    # Check if user exists
         return failure_response("User not found")
     
@@ -607,8 +701,11 @@ def login():
     if not user or not user.check_password(body['password']):
         return failure_response('Invalid username or password', 401)
     
-    # In a real application, you'd generate a JWT token or session here
-    return success_response({'message': 'Login successful', 'user': user.to_dict()})
+    token = generate_token(user.id)
+    return success_response({
+        'token': token,
+        'user': user.to_dict()
+    })
 
 
 @app.route('/api/auth/logout/', methods=['POST'])
@@ -620,7 +717,11 @@ def logout():
 
 # Recipe suggestion route using AI
 @app.route('/api/users/<int:user_id>/recipe-suggestions/')
-def get_recipe_suggestions(user_id):
+@token_required
+def get_recipe_suggestions(current_user_id, user_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
 
     if user is None:
@@ -721,7 +822,11 @@ def build_recipe_prompt(ingredients, allergies, meal_type=None, cuisine=None, di
 
 
 @app.route('/api/users/<int:user_id>/saved-recipes/')
-def get_recipes(user_id):
+@token_required
+def get_recipes(current_user_id, user_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     if User.query.get(user_id) is None:
         return failure_response("User not found")
     
@@ -731,7 +836,11 @@ def get_recipes(user_id):
 
 
 @app.route('/api/users/<int:user_id>/saved-recipes/', methods=['POST'])
-def save_recipe(user_id):
+@token_required
+def save_recipe(current_user_id, user_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
 
     if user is None:
@@ -758,7 +867,11 @@ def save_recipe(user_id):
 
 
 @app.route('/api/users/<int:user_id>/saved-recipes/<int:recipe_id>', methods=['PUT'])
-def rename_recipe(user_id, recipe_id):
+@token_required
+def rename_recipe(current_user_id, user_id, recipe_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
     if not user:
         return failure_response("User not found", 404)
@@ -777,7 +890,11 @@ def rename_recipe(user_id, recipe_id):
 
 
 @app.route('/api/users/<int:user_id>/saved-recipes/<int:recipe_id>/', methods=['DELETE'])
-def delete_recipe(user_id, recipe_id):
+@token_required
+def delete_recipe(current_user_id, user_id, recipe_id):
+    if current_user_id != user_id:
+        return failure_response("Unauthorized access", 403)
+        
     user = User.query.get(user_id)
 
     if user is None:
