@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import api from '../axios';
 
 const SavedRecipes = ({ user }) => {
   const [recipes, setRecipes] = useState([]);
@@ -14,8 +15,8 @@ const SavedRecipes = ({ user }) => {
     async function fetchSavedRecipes() {
       try {
         setLoading(true);
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/saved-recipes/`);
-        const result = await response.json();
+        const response = await api.get(`/api/users/${userId}/saved-recipes/`);
+        const result = response.data;
         if (result.success) {
           setRecipes(result.data || []);
           setError(null);
@@ -49,10 +50,8 @@ const SavedRecipes = ({ user }) => {
       // Optimistic UI update: remove first
       setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/saved-recipes/${recipeId}`, {
-        method: "DELETE",
-      });
-      const result = await response.json();
+      const response = await api.delete(`/api/users/${userId}/saved-recipes/${recipeId}`);
+      const result = response.data;
 
       if (!result.success) {
         throw new Error(result.error || "Failed to delete recipe.");
@@ -61,8 +60,8 @@ const SavedRecipes = ({ user }) => {
       alert(`Error deleting recipe: ${err.message}`);
       // On error, refetch recipes to sync UI
       try {
-        const resp = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/saved-recipes/`);
-        const resJson = await resp.json();
+        const resp = await api.get(`/api/users/${userId}/saved-recipes/`);
+        const resJson = resp.data;
         if (resJson.success) setRecipes(resJson.data || []);
       } catch {
         // ignore
@@ -235,18 +234,12 @@ const SavedRecipes = ({ user }) => {
             <button
               onClick={async () => {
                 try {
-                  const res = await fetch(
-                    `${process.env.REACT_APP_API_URL}/api/users/${userId}/saved-recipes/${recipeBeingRenamed.id}`,
-                    {
-                      method: "PUT",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({ name: renameInput.trim() }),
-                    }
+                  const res = await api.put(
+                    `/api/users/${userId}/saved-recipes/${recipeBeingRenamed.id}`,
+                    { name: renameInput.trim() }
                   );
-                  const result = await res.json();
-                  if (res.ok && result.success) {
+                  const result = res.data;
+                  if (result.success) {
                     setRecipes((prev) =>
                       prev.map((r) =>
                         r.id === recipeBeingRenamed.id

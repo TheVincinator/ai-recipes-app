@@ -14,7 +14,9 @@ const SignupForm = ({ onSignup }) => {
     setError('');
     try {
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/users/`, form);
-      onSignup(response.data.data); // or auto-login
+      const { token, user } = response.data.data;
+      localStorage.setItem('token', token);
+      onSignup(user);
     } catch (err) {
       setError(err.response?.data?.error || 'Signup failed');
     }

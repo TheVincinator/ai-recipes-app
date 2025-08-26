@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../axios';
 import { useState, useEffect } from 'react';
 import EditAllergyModal from './EditAllergyModal';
 
@@ -108,9 +108,9 @@ export default function AllergyManager({ userId }) {
 
   // Fetch allergies for the user
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/allergies/`)
-      .then((res) => res.json())
-      .then((data) => {
+    api.get(`/api/users/${userId}/allergies/`)
+      .then((response) => {
+        const data = response.data;
         if (data.success) {
           setAllergies(data.data);
         }
@@ -153,13 +153,9 @@ export default function AllergyManager({ userId }) {
       allergy_category: allergyCategory,
     };
 
-    fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/allergies/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(allergyData),
-    })
-      .then((res) => res.json())
-      .then((data) => {
+    api.post(`/api/users/${userId}/allergies/`, allergyData)
+      .then((response) => {
+        const data = response.data;
         if (data.success) {
           setAllergies((prev) => [...prev, data.data]);
           setForm({ allergy_name: '', allergy_category: '' });
@@ -184,16 +180,12 @@ export default function AllergyManager({ userId }) {
     );
   
     // Optionally send PATCH to backend to persist changes
-    fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/allergies/${updatedAllergy.id}/`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        allergy_name: updatedAllergy.allergy_name,
-        allergy_category: updatedAllergy.allergy_category,
-      }),
+    api.put(`/api/users/${userId}/allergies/${updatedAllergy.id}/`, {
+      allergy_name: updatedAllergy.allergy_name,
+      allergy_category: updatedAllergy.allergy_category,
     })
-      .then(res => res.json())
-      .then(data => {
+      .then(response => {
+        const data = response.data;
         if (!data.success) {
           alert("Failed to update allergy on server.");
           // Optionally revert UI update or refresh allergies from server
@@ -209,7 +201,7 @@ export default function AllergyManager({ userId }) {
   const deleteAllergy = async (id) => {
     if (!window.confirm("Are you sure you want to delete this allergy?")) return;
     try {
-      await axios.delete(`${process.env.REACT_APP_API_URL}/api/users/${userId}/allergies/${id}/`);
+      await api.delete(`/api/users/${userId}/allergies/${id}/`);
       setAllergies((prev) => prev.filter(ing => ing.id !== id));
     } catch (error) {
       console.error('Error deleting allergy:', error);

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../axios';
 import React, { useState, useEffect } from 'react';
 import AllergyManager from './AllergyManager';
 import EditIngredientModal from './EditIngredientModal';
@@ -154,7 +154,7 @@ export default function IngredientManager({ user }) {
       if (searchDebounced) queryParams.append('q', searchDebounced);
       if (categoryFilterDebounced) queryParams.append('category', categoryFilterDebounced);
 
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/users/${user.id}/ingredients/search/?${queryParams}`);
+      const res = await api.get(`/api/users/${user.id}/ingredients/search/?${queryParams}`);
       setIngredients(res.data.data);
     } catch (error) {
       console.error('Error fetching ingredients:', error);
@@ -195,13 +195,9 @@ export default function IngredientManager({ user }) {
       quantity: form.quantity ? parseFloat(form.quantity) : null,
     };
 
-    fetch(`${process.env.REACT_APP_API_URL}/api/users/${user.id}/ingredients/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(ingredientData),
-    })
-      .then((res) => res.json())
-      .then((data) => {
+    api.post(`/api/users/${user.id}/ingredients/`, ingredientData)
+      .then((response) => {
+        const data = response.data;
         if (data.success) {
           setIngredients((prev) => [...prev, data.data]);
           setForm({ name: '', quantity: '', unit: '', category: '' });
@@ -222,13 +218,8 @@ export default function IngredientManager({ user }) {
   
   const handleUpdate = async (updatedIngredient) => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${user.id}/ingredients/${updatedIngredient.id}/`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedIngredient),
-      });
-  
-      const data = await res.json();
+      const res = await api.put(`/api/users/${user.id}/ingredients/${updatedIngredient.id}/`, updatedIngredient);
+      const data = res.data;
       if (data.success) {
         setIngredients((prev) =>
           prev.map((ing) => (ing.id === updatedIngredient.id ? updatedIngredient : ing))
@@ -242,7 +233,7 @@ export default function IngredientManager({ user }) {
   const removeIngredient = async (id) => {
     if (!window.confirm("Are you sure you want to delete this ingredient?")) return;
     try {
-      await axios.delete(`${process.env.REACT_APP_API_URL}/api/users/${user.id}/ingredients/${id}/`);
+      await api.delete(`/api/users/${user.id}/ingredients/${id}/`);
       setIngredients((prev) => prev.filter(ing => ing.id !== id));
     } catch (error) {
       console.error('Error deleting ingredient:', error);

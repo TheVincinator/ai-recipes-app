@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import api from '../axios';
 
 const mealTypeOptions = ["breakfast", "lunch", "dinner", "snack"];
 const cuisineOptions = ["American", "Italian", "Mexican", "Chinese", "Indian", "French", "Japanese"];
@@ -27,10 +28,8 @@ const RecipeSuggestions = ({ userId }) => {
     if (diet) params.append("diet", diet);
 
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/users/${userId}/recipe-suggestions/?${params.toString()}`
-      );
-      const result = await response.json();
+      const response = await api.get(`/api/users/${userId}/recipe-suggestions/?${params.toString()}`);
+      const result = response.data;
 
       if (result.success) {
         setRecipes(result.data.recipes || "");
@@ -167,16 +166,12 @@ const RecipeSuggestions = ({ userId }) => {
               <button
                 onClick={async () => {
                   try {
-                    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/${userId}/saved-recipes/`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        name: recipeName.trim() || '',
-                        recipe: recipeToSave,
-                      }),
+                    const response = await api.post(`/api/users/${userId}/saved-recipes/`, {
+                      name: recipeName.trim() || '',
+                      recipe: recipeToSave,
                     });
 
-                    const result = await response.json();
+                    const result = response.data;
 
                     if (!response.ok || !result.success) {
                       setMessageModal({ show: true, message: "❌ Failed to save recipe.", success: false });
