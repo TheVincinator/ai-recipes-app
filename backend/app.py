@@ -25,7 +25,9 @@ app.url_map.strict_slashes = False
 
 CORS(app, origins=[
     "https://ai-recipes-app-amber.vercel.app",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "http://localhost:3003",
+    "http://localhost:3004"
 ])
 
 # Config
