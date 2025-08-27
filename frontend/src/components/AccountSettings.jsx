@@ -65,67 +65,85 @@ const AccountSettings = ({ user, onLogout }) => {
   }, [showDeleteModal]);
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <h2 className="text-xl mb-4">Account Settings</h2>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center items-center py-12">
+      <div className="max-w-md w-full mx-auto">
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Account Settings</h2>
+            <p className="text-gray-600">Update your profile information</p>
+          </div>
 
-      <form onSubmit={handleSubmit} aria-label="Account settings form">
-        <label htmlFor="username" className="sr-only">Username</label>
-        <input
-          id="username"
-          type="text"
-          name="username"
-          value={form.username}
-          onChange={handleChange}
-          className="block w-full p-2 mb-2 border"
-          placeholder="Username"
-          disabled={loading}
-          required
-        />
-        <label htmlFor="email" className="sr-only">Email</label>
-        <input
-          id="email"
-          type="email"
-          name="email"
-          value={form.email}
-          onChange={handleChange}
-          className="block w-full p-2 mb-2 border"
-          placeholder="Email"
-          disabled={loading}
-          required
-        />
+          <form onSubmit={handleSubmit} aria-label="Account settings form" className="space-y-6">
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+              <input
+                id="username"
+                type="text"
+                name="username"
+                value={form.username}
+                onChange={handleChange}
+                className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                placeholder="Username"
+                disabled={loading}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input
+                id="email"
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                placeholder="Email"
+                disabled={loading}
+                required
+              />
+            </div>
 
-        {message && <p className="text-green-600">{message}</p>}
-        {error && <p className="text-red-600">{error}</p>}
+            {message && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-green-800 text-sm">{message}</p>
+              </div>
+            )}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-800 text-sm">{error}</p>
+              </div>
+            )}
 
-        <div className="flex gap-4 mt-4">
-          <button
-            type="submit"
-            className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
-            disabled={loading}
-          >
-            {loading ? 'Updating...' : 'Update'}
-          </button>
+            <div className="space-y-3">
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                disabled={loading}
+              >
+                {loading ? 'Updating...' : 'Update Profile'}
+              </button>
 
-          <button
-            type="button"
-            className="bg-red-500 text-white px-4 py-2 rounded disabled:opacity-50"
-            onClick={() => setShowConfirmDelete(true)}
-            disabled={loading}
-          >
-            Delete Account
-          </button>
+              <button
+                type="button"
+                className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                onClick={() => setShowConfirmDelete(true)}
+                disabled={loading}
+              >
+                Delete Account
+              </button>
 
-          {/* New Logout button */}
-          <button
-            type="button"
-            className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
-            onClick={handleLogout}
-            disabled={loading}
-          >
-            Logout
-          </button>
+              <button
+                type="button"
+                className="w-full bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                onClick={handleLogout}
+                disabled={loading}
+              >
+                Logout
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
+      </div>
 
       {/* Confirm Delete Modal */}
       {showConfirmDelete && (
@@ -135,22 +153,22 @@ const AccountSettings = ({ user, onLogout }) => {
           aria-modal="true"
           aria-labelledby="confirmDeleteTitle"
         >
-          <div className="bg-white p-6 rounded shadow-lg max-w-sm w-full text-center">
-            <h3 id="confirmDeleteTitle" className="text-lg font-bold mb-4">
+          <div className="bg-white p-8 rounded-xl shadow-lg max-w-sm w-full text-center">
+            <h3 id="confirmDeleteTitle" className="text-2xl font-bold text-gray-900 mb-4">
               Confirm Delete
             </h3>
-            <p>Are you sure you want to delete your account? This action cannot be undone.</p>
-            <div className="flex justify-center gap-4 mt-6">
+            <p className="text-gray-600 mb-6">Are you sure you want to delete your account? This action cannot be undone.</p>
+            <div className="space-y-3">
               <button
                 onClick={handleDelete}
-                className="bg-red-600 text-white px-4 py-2 rounded"
+                className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
                 disabled={loading}
               >
                 {loading ? 'Deleting...' : 'Yes, Delete'}
               </button>
               <button
                 onClick={() => setShowConfirmDelete(false)}
-                className="bg-gray-300 px-4 py-2 rounded"
+                className="w-full bg-gradient-to-r from-gray-300 to-gray-400 hover:from-gray-400 hover:to-gray-500 text-gray-800 font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
                 disabled={loading}
               >
                 Cancel
@@ -168,15 +186,15 @@ const AccountSettings = ({ user, onLogout }) => {
           aria-modal="true"
           aria-labelledby="deletedTitle"
         >
-          <div className="bg-white p-6 rounded shadow-lg max-w-sm w-full text-center">
-            <h3 id="deletedTitle" className="text-lg font-bold mb-4">
+          <div className="bg-white p-8 rounded-xl shadow-lg max-w-sm w-full text-center">
+            <h3 id="deletedTitle" className="text-2xl font-bold text-gray-900 mb-4">
               Account Deleted
             </h3>
-            <p>Your account has been successfully deleted.</p>
+            <p className="text-gray-600 mb-6">Your account has been successfully deleted.</p>
             <button
               ref={closeButtonRef}
               onClick={closeModal}
-              className="mt-6 bg-blue-500 text-white px-4 py-2 rounded"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               Close
             </button>

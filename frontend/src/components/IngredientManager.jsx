@@ -251,165 +251,203 @@ export default function IngredientManager({ user }) {
   }));
 
   return (
-    <div className="max-w-xl mx-auto p-6 bg-white shadow-md rounded-lg">
-      <h2 className="text-2xl font-bold mb-4">🧾 Manage Ingredients</h2>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 py-12 px-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">🧾 Manage Ingredients</h2>
+            <p className="text-gray-600">Add and organize your ingredients</p>
+          </div>
 
-      {/* Search + Filter */}
-      <div className="flex gap-2 mb-4">
-        <label htmlFor="search" className="sr-only">Search ingredients</label>
-        <input
-          id="search"
-          type="text"
-          className="flex-grow border rounded p-2"
-          placeholder="🔍 Search ingredients..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <label htmlFor="categoryFilter" className="sr-only">Category filter</label>
-        <CreatableSelect
-          className="w-1/3 text-sm"
-          placeholder="Filter by category..."
-          isClearable
-          value={
-            categoryFilter
-              ? { value: categoryFilter, label: categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1) }
-              : null
-          }
-          onChange={(selectedOption) =>
-            setCategoryFilter(selectedOption ? selectedOption.value : '')
-          }
-          options={categorySelectOptions}
-        />
-      </div>
-
-      {/* Add Ingredient Form */}
-      <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-2 mb-4">
-        <label htmlFor="name" className="sr-only">Ingredient name</label>
-        <div>
-          <input
-            list="name"
-            placeholder="Ingredient name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="border p-2 rounded w-full"
-          />
-          <datalist id="name">
-            {ingredientOptions.map((u) => (
-              <option key={u} value={u} />
-            ))}
-          </datalist>
-        </div>
-
-        <label htmlFor="quantity" className="sr-only">Quantity</label>
-        <input
-          id="quantity"
-          className={`border rounded p-2 ${
-            form.name === ''
-              ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-              : ''
-          }`}
-          name="quantity"
-          value={form.quantity}
-          onChange={handleChange}
-          placeholder="Quantity (optional)"
-          type="number"
-          step="any"
-          min="0"
-          disabled={
-            form.name === ''
-          }
-        />
-
-        <label htmlFor="unit" className="sr-only">Unit</label>
-        <div>
-          <input
-            list="unit"
-            placeholder="Unit (optional)"
-            value={form.unit}
-            onChange={(e) => setForm({ ...form, unit: e.target.value })}
-            className={`border p-2 rounded w-full ${form.quantity === '' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
-            disabled={form.quantity === '' || isNaN(Number(form.quantity))}
-          />
-          <datalist id="unit">
-            {unitOptions.map((u) => (
-              <option key={u} value={u} />
-            ))}
-          </datalist>
-        </div>
-
-
-        <label htmlFor="category" className="sr-only">Category</label>
-        <div>
-          <input
-            list="category"
-            placeholder="Category (optional)"
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
-            className={`border p-2 rounded w-full ${form.name === '' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
-            disabled={form.name === ''}
-          />
-          <datalist id="category">
-            {categoryOptions.map((u) => (
-              <option key={u} value={u} />
-            ))}
-          </datalist>
-        </div>
-
-
-        <button
-          type="submit"
-          disabled={!isValid()}
-          className={`col-span-2 p-2 rounded text-white transition
-            ${isValid() ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400 cursor-not-allowed'}`}
-        >
-          ➕ Add Ingredient
-        </button>
-      </form>
-
-      {/* Ingredient List */}
-      <ul className="divide-y">
-        {ingredients.map((ingredient) => (
-          <li key={ingredient.id} className="py-2 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-            {ingredientOptions.map(name => name.toLowerCase()).includes(ingredient.name.toLowerCase()) ? (
-              <img
-                src={`${process.env.REACT_APP_API_URL}/api/assets/ingredients/default_images/${ingredient.name.toLowerCase()}`}
-                alt={ingredient.name}
-                className="w-8 h-8 rounded-full object-cover border border-gray-300"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `${process.env.REACT_APP_API_URL}/api/assets/ingredients/default_images/placeholder`;
+          {/* Search + Filter */}
+          <div className="flex gap-3 mb-6">
+            <label htmlFor="search" className="sr-only">Search ingredients</label>
+            <input
+              id="search"
+              type="text"
+              className="flex-grow px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200"
+              placeholder="🔍 Search ingredients..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <label htmlFor="categoryFilter" className="sr-only">Category filter</label>
+            <div className="w-1/3">
+              <CreatableSelect
+                className="text-sm"
+                placeholder="Filter by category..."
+                isClearable
+                value={
+                  categoryFilter
+                    ? { value: categoryFilter, label: categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1) }
+                    : null
+                }
+                onChange={(selectedOption) =>
+                  setCategoryFilter(selectedOption ? selectedOption.value : '')
+                }
+                options={categorySelectOptions}
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: '8px',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                    '&:hover': {
+                      border: '1px solid #10b981'
+                    }
+                  })
                 }}
               />
+            </div>
+          </div>
+
+          {/* Add Ingredient Form */}
+          <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">Ingredient name</label>
+                <input
+                  list="name"
+                  placeholder="Enter ingredient name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200"
+                />
+                <datalist id="name">
+                  {ingredientOptions.map((u) => (
+                    <option key={u} value={u} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div>
+                <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-2">Quantity (optional)</label>
+                <input
+                  id="quantity"
+                  className={`block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200 ${
+                    form.name === ''
+                      ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                      : ''
+                  }`}
+                  name="quantity"
+                  value={form.quantity}
+                  onChange={handleChange}
+                  placeholder="Enter quantity"
+                  type="number"
+                  step="any"
+                  min="0"
+                  disabled={
+                    form.name === ''
+                  }
+                />
+              </div>
+
+              <div>
+                <label htmlFor="unit" className="block text-sm font-medium text-gray-700 mb-2">Unit (optional)</label>
+                <input
+                  list="unit"
+                  placeholder="Enter unit"
+                  value={form.unit}
+                  onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                  className={`block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200 ${form.quantity === '' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                  disabled={form.quantity === '' || isNaN(Number(form.quantity))}
+                />
+                <datalist id="unit">
+                  {unitOptions.map((u) => (
+                    <option key={u} value={u} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">Category (optional)</label>
+                <input
+                  list="category"
+                  placeholder="Enter category"
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  className={`block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200 ${form.name === '' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                  disabled={form.name === ''}
+                />
+                <datalist id="category">
+                  {categoryOptions.map((u) => (
+                    <option key={u} value={u} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={!isValid()}
+              className={`w-full font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                isValid() 
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white focus:ring-green-500' 
+                  : 'bg-gray-400 text-gray-200 cursor-not-allowed transform-none'
+              }`}
+            >
+              ➕ Add Ingredient
+            </button>
+          </form>
+
+          {/* Ingredient List */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Ingredients</h3>
+            {ingredients.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No ingredients yet. Add some above!</p>
             ) : (
-              <IngredientImage 
-                name={ingredient.name}
-                category={ingredient.category}
-              />
+              <ul className="space-y-3">
+                {ingredients.map((ingredient) => (
+                  <li key={ingredient.id} className="bg-gray-50 rounded-lg p-4 flex justify-between items-center hover:bg-gray-100 transition duration-200">
+                    <div className="flex items-center gap-3">
+                    {ingredientOptions.map(name => name.toLowerCase()).includes(ingredient.name.toLowerCase()) ? (
+                      <img
+                        src={`${process.env.REACT_APP_API_URL}/api/assets/ingredients/default_images/${ingredient.name.toLowerCase()}`}
+                        alt={ingredient.name}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = `${process.env.REACT_APP_API_URL}/api/assets/ingredients/default_images/placeholder`;
+                        }}
+                      />
+                    ) : (
+                      <IngredientImage 
+                        name={ingredient.name}
+                        category={ingredient.category}
+                      />
+                    )}
+                      <div>
+                        <span className="font-medium text-gray-900">{ingredient.name}</span>
+                        {ingredient.quantity != null && (
+                          <span className="text-gray-600"> - {ingredient.quantity} {ingredient.unit}</span>
+                        )}
+                        {ingredient.category && (
+                          <span className="text-gray-500 text-sm block">({ingredient.category})</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openEditModal(ingredient)}
+                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition duration-200"
+                        title="Edit ingredient"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => removeIngredient(ingredient.id)}
+                        className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition duration-200"
+                        title="Delete ingredient"
+                      >
+                        ❌
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
-              <span>
-                <strong>{ingredient.name}</strong>
-                {ingredient.quantity != null && ` - ${ingredient.quantity} ${ingredient.unit}`}
-                {ingredient.category && ` (${ingredient.category})`}
-              </span>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => openEditModal(ingredient)}
-                className="text-blue-500 hover:underline hover:decoration-blue-500"
-              >
-                ✏️
-              </button>
-              <button
-                onClick={() => removeIngredient(ingredient.id)}
-                className="text-red-500 hover:underline hover:decoration-red-700"
-              >
-                ❌
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+          </div>
+        </div>
+      </div>
 
       <EditIngredientModal
         isOpen={isModalOpen}
@@ -419,12 +457,10 @@ export default function IngredientManager({ user }) {
       />
 
       {/* Allergy Manager */}
-      <div>
       <AllergyManager userId={user.id} />
-      </div>
-      <div>
+      
+      {/* Recipe Suggestions */}
       <RecipeSuggestions userId={user.id} />
-      </div>
 
     </div>
   );
