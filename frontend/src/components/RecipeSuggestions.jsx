@@ -53,116 +53,116 @@ const RecipeSuggestions = ({ userId }) => {
   };
 
   return (
-    <div className="mt-8 border-t pt-6">
-      <h2 className="text-xl font-bold mb-2">Get Recipe Suggestions</h2>
+    <div className="max-w-4xl mx-auto mb-12">
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">🍳 Recipe Suggestions</h2>
+            <p className="text-gray-600">Get personalized recipes based on your ingredients</p>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        {/* Meal Type Input */}
-        <div>
-          <input
-            list="mealTypes"
-            placeholder="Meal Type (e.g. dinner)"
-            value={mealType}
-            onChange={(e) => setMealType(e.target.value)}
-            className="border p-2 rounded w-full"
-          />
-          <datalist id="mealTypes">
-            {mealTypeOptions.map((type) => (
-              <option key={type} value={type} />
-            ))}
-          </datalist>
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {/* Meal Type Input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Meal Type</label>
+              <input
+                list="mealTypes"
+                placeholder="e.g. dinner"
+                value={mealType}
+                onChange={(e) => setMealType(e.target.value)}
+                className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition duration-200"
+              />
+              <datalist id="mealTypes">
+                {mealTypeOptions.map((type) => (
+                  <option key={type} value={type} />
+                ))}
+              </datalist>
+            </div>
 
-        {/* Cuisine Input */}
-        <div>
-          <input
-            list="cuisines"
-            placeholder="Cuisine (e.g. Italian)"
-            value={cuisine}
-            onChange={(e) => setCuisine(e.target.value)}
-            className="border p-2 rounded w-full"
-          />
-          <datalist id="cuisines">
-            {cuisineOptions.map((cuisine) => (
-              <option key={cuisine} value={cuisine} />
-            ))}
-          </datalist>
-        </div>
+            {/* Cuisine Input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cuisine</label>
+              <input
+                list="cuisines"
+                placeholder="e.g. Italian"
+                value={cuisine}
+                onChange={(e) => setCuisine(e.target.value)}
+                className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition duration-200"
+              />
+              <datalist id="cuisines">
+                {cuisineOptions.map((cuisine) => (
+                  <option key={cuisine} value={cuisine} />
+                ))}
+              </datalist>
+            </div>
 
-        {/* Diet Input */}
-        <div>
-          <input
-            list="diets"
-            placeholder="Diet (e.g. vegetarian)"
-            value={diet}
-            onChange={(e) => setDiet(e.target.value)}
-            className="border p-2 rounded w-full"
-          />
-          <datalist id="diets">
-            {dietOptions.map((diet) => (
-              <option key={diet} value={diet} />
-            ))}
-          </datalist>
-        </div>
-      </div>
+            {/* Diet Input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Diet</label>
+              <input
+                list="diets"
+                placeholder="e.g. vegetarian"
+                value={diet}
+                onChange={(e) => setDiet(e.target.value)}
+                className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition duration-200"
+              />
+              <datalist id="diets">
+                {dietOptions.map((diet) => (
+                  <option key={diet} value={diet} />
+                ))}
+              </datalist>
+            </div>
+          </div>
 
-      <button
-        onClick={fetchRecipes}
-        disabled={loading}
-        className={`${
-          loading ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
-        } text-white font-semibold px-4 py-2 rounded`}
-      >
-        {loading ? "Loading..." : "Get Suggestions"}
-      </button>
-
-      {error && (
-        <p className="mt-4 text-sm text-red-600 border border-red-300 bg-red-100 p-2 rounded">
-          ⚠️ {error}
-        </p>
-      )}
-
-      {recipes && (
-        <div
-          ref={recipeRef}  // 👈 Add this line
-          className="mt-6 bg-gray-100 p-4 rounded shadow whitespace-pre-wrap"
-        >
-          <h3 className="font-semibold mb-2">Suggested Recipes:</h3>
-          <p>{recipes}</p>
           <button
-            onClick={() => {
-              setRecipeToSave(recipes);
-              setShowNameModal(true);
-            }}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            onClick={fetchRecipes}
+            disabled={loading}
+            className={`w-full font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 mb-6 ${
+              loading 
+                ? "bg-gray-400 text-gray-200 cursor-not-allowed transform-none" 
+                : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white focus:ring-purple-500"
+            }`}
           >
-            Save This Recipe
+            {loading ? "Loading..." : "🔍 Get Recipe Suggestions"}
           </button>
-        </div>
-      )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <p className="text-red-800 text-sm">⚠️ {error}</p>
+            </div>
+          )}
+
+          {recipes && (
+            <div
+              ref={recipeRef}
+              className="bg-gray-50 rounded-lg p-6 whitespace-pre-wrap"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">🍽️ Suggested Recipes:</h3>
+              <div className="text-gray-700 mb-4">{recipes}</div>
+              <button
+                onClick={() => {
+                  setRecipeToSave(recipes);
+                  setShowNameModal(true);
+                }}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                💾 Save This Recipe
+              </button>
+            </div>
+          )}
+      </div>
 
       {showNameModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md transform transition-all duration-300 scale-100">
-            <h2 className="text-xl font-semibold mb-4">Name Your Recipe</h2>
+          <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md transform transition-all duration-300 scale-100">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Name Your Recipe</h2>
             <input
               type="text"
               placeholder="Enter recipe name (optional)"
               value={recipeName}
               onChange={(e) => setRecipeName(e.target.value)}
-              className="w-full border border-gray-300 rounded p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 mb-6"
             />
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowNameModal(false);
-                  setRecipeName("");
-                  setRecipeToSave(null);
-                }}
-                className="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded"
-              >
-                Cancel
-              </button>
+            <div className="space-y-3">
               <button
                 onClick={async () => {
                   try {
@@ -187,9 +187,19 @@ const RecipeSuggestions = ({ userId }) => {
                     setRecipeToSave(null);
                   }
                 }}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
               >
-                Save
+                💾 Save Recipe
+              </button>
+              <button
+                onClick={() => {
+                  setShowNameModal(false);
+                  setRecipeName("");
+                  setRecipeToSave(null);
+                }}
+                className="w-full bg-gradient-to-r from-gray-300 to-gray-400 hover:from-gray-400 hover:to-gray-500 text-gray-800 font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -198,21 +208,19 @@ const RecipeSuggestions = ({ userId }) => {
 
       {messageModal.show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className={`bg-white p-6 rounded-lg shadow-lg w-full max-w-sm transform transition-all duration-300 scale-100 border-l-4 ${
+          <div className={`bg-white p-8 rounded-xl shadow-lg w-full max-w-sm transform transition-all duration-300 scale-100 border-l-4 ${
             messageModal.success ? "border-green-500" : "border-red-500"
           }`}>
-            <h2 className="text-lg font-semibold mb-2">
-              {messageModal.success ? "Success" : "Error"}
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              {messageModal.success ? "✅ Success" : "❌ Error"}
             </h2>
-            <p className="mb-4">{messageModal.message}</p>
-            <div className="flex justify-end">
-              <button
-                onClick={() => setMessageModal({ show: false, message: "", success: true })}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
-              >
-                OK
-              </button>
-            </div>
+            <p className="text-gray-600 mb-6">{messageModal.message}</p>
+            <button
+              onClick={() => setMessageModal({ show: false, message: "", success: true })}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              OK
+            </button>
           </div>
         </div>
       )}
