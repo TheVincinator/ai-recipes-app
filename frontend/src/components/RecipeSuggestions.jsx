@@ -53,9 +53,8 @@ const RecipeSuggestions = ({ userId }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 pt-20 pb-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-xl shadow-lg p-8">
+    <div className="max-w-4xl mx-auto mb-12">
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">🍳 Recipe Suggestions</h2>
             <p className="text-gray-600">Get personalized recipes based on your ingredients</p>
@@ -150,7 +149,6 @@ const RecipeSuggestions = ({ userId }) => {
               </button>
             </div>
           )}
-        </div>
       </div>
 
       {showNameModal && (

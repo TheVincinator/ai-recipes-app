@@ -71,13 +71,13 @@ const SavedRecipes = ({ user }) => {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 pt-20 pb-12 px-4 flex justify-center items-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-100 via-pink-100 to-purple-200 pt-20 pb-12 px-4 flex justify-center items-center">
         <div className="text-gray-600 text-xl animate-pulse">Loading saved recipes...</div>
       </div>
     );
   if (error)
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 pt-20 pb-12 px-4 flex justify-center items-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-100 via-pink-100 to-purple-200 pt-20 pb-12 px-4 flex justify-center items-center">
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-md">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-red-800 text-center">❌ {error}</p>
@@ -87,7 +87,7 @@ const SavedRecipes = ({ user }) => {
     );
   if (!recipes.length)
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 pt-20 pb-12 px-4 flex justify-center items-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-100 via-pink-100 to-purple-200 pt-20 pb-12 px-4 flex justify-center items-center">
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-md text-center">
           <h3 className="text-2xl font-bold text-gray-900 mb-4">📚 No Recipes Yet</h3>
           <p className="text-gray-600">You haven't saved any recipes yet. Start by getting some recipe suggestions!</p>
@@ -96,7 +96,7 @@ const SavedRecipes = ({ user }) => {
     );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 pt-20 pb-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-orange-100 via-pink-100 to-purple-200 pt-20 pb-12 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">📚 Saved Recipes</h2>
@@ -119,9 +119,9 @@ const SavedRecipes = ({ user }) => {
               tabIndex={0}
               role="button"
               aria-label={`View recipe: ${recipe.name || "Unnamed"}`}
-              className="cursor-pointer bg-white rounded-lg shadow-md p-5 flex flex-col justify-between
+              className="cursor-pointer bg-gradient-to-br from-white via-blue-50 to-indigo-100 rounded-xl shadow-lg p-6 flex flex-col justify-between border border-indigo-200/50
                 transform transition duration-300 ease-in-out
-                hover:scale-[1.05] hover:shadow-2xl hover:shadow-blue-400/30 focus:outline-none focus:ring-4 focus:ring-blue-400"
+                hover:scale-[1.03] hover:shadow-2xl hover:shadow-purple-500/30 hover:from-indigo-50 hover:to-purple-100 focus:outline-none focus:ring-4 focus:ring-purple-400"
               onKeyDown={(e) => {
                 if (e.key === "Enter") setSelectedRecipe(recipe);
               }}
@@ -143,9 +143,9 @@ const SavedRecipes = ({ user }) => {
                       recipe.name || "recipe"
                     );
                   }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm rounded px-3 py-1
-                    transition-transform duration-200 ease-in-out
-                    hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-sm rounded-lg px-4 py-2 font-medium
+                    transition-all duration-200 ease-in-out
+                    hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-1"
                 >
                   Save Locally
                 </button>
