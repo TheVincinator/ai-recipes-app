@@ -71,29 +71,39 @@ const SavedRecipes = ({ user }) => {
 
   if (loading)
     return (
-      <div className="flex justify-center items-center h-48 text-gray-600 animate-pulse">
-        Loading saved recipes...
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 pt-20 pb-12 px-4 flex justify-center items-center">
+        <div className="text-gray-600 text-xl animate-pulse">Loading saved recipes...</div>
       </div>
     );
   if (error)
     return (
-      <div className="text-red-600 text-center mt-10 font-semibold animate-fadeIn">
-        {error}
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 pt-20 pb-12 px-4 flex justify-center items-center">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-800 text-center">❌ {error}</p>
+          </div>
+        </div>
       </div>
     );
   if (!recipes.length)
     return (
-      <div className="text-gray-500 text-center mt-10 italic animate-fadeIn">
-        You have no saved recipes yet.
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 pt-20 pb-12 px-4 flex justify-center items-center">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md text-center">
+          <h3 className="text-2xl font-bold text-gray-900 mb-4">📚 No Recipes Yet</h3>
+          <p className="text-gray-600">You haven't saved any recipes yet. Start by getting some recipe suggestions!</p>
+        </div>
       </div>
     );
 
   return (
-    <>
-      <div
-        className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 animate-fadeInUp"
-        style={{ animationFillMode: "forwards" }}
-      >
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 pt-20 pb-12 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">📚 Saved Recipes</h2>
+          <p className="text-gray-600">Your collection of favorite recipes</p>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {recipes.map((recipe) => {
           const preview =
             (typeof recipe === "string"
@@ -170,6 +180,7 @@ const SavedRecipes = ({ user }) => {
             </article>
           );
         })}
+        </div>
       </div>
 
       {selectedRecipe && (
@@ -291,7 +302,7 @@ const SavedRecipes = ({ user }) => {
           animation: fadeInUp 0.5s ease forwards;
         }
       `}</style>
-    </>
+    </div>
   );
 };
 

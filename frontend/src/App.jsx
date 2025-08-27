@@ -64,7 +64,7 @@ function App() {
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       ) : (
-        <div className="pt-16 px-4"> {/* Adds spacing for fixed menu */}
+        <div> {/* Remove spacing since components handle their own layout */}
           <Routes>
             <Route path="/ingredients" element={<IngredientManager user={user} />} />
             <Route path="/search" element={<IngredientSearch user={user} />} />

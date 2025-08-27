@@ -215,7 +215,8 @@ export default function AllergyManager({ userId }) {
 
 
   return (
-    <div className="max-w-2xl mx-auto mt-12">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 pt-20 pb-12 px-4">
+      <div className="max-w-2xl mx-auto">
       <div className="bg-white rounded-xl shadow-lg p-8">
         <div className="text-center mb-8">
           <h3 className="text-3xl font-bold text-gray-900 mb-2">Manage Allergies</h3>
@@ -338,6 +339,7 @@ export default function AllergyManager({ userId }) {
         onSave={saveEditedAllergy}
       />
 
+    </div>
     </div>
   );
 }
