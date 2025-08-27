@@ -8,15 +8,17 @@ function LoginWrapper({ onLogin }) {
   };
 
   return (
-    <>
-      <LoginForm onLogin={handleLogin} />
-      <p className="text-center mt-2">
-        Don't have an account?{' '}
-        <button className="text-blue-500" onClick={() => navigate('/signup')}>
-          Sign up
-        </button>
-      </p>
-    </>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center items-center py-12">
+      <div className="w-full max-w-md">
+        <LoginForm onLogin={handleLogin} />
+        <p className="text-center mt-6 text-gray-600">
+          Don't have an account yet?{' '}
+          <button className="text-blue-600 hover:text-blue-800 font-medium underline transition duration-200" onClick={() => navigate('/signup')}>
+            Sign up
+          </button>
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -30,14 +32,16 @@ function SignupWrapper({ onSignup }) {
   };
 
   return (
-    <>
-      <SignupForm onSignup={handleSignup} />
-      <p className="text-center mt-2">
-        Already have an account?{' '}
-        <button className="text-blue-500" onClick={() => navigate('/login')}>
-          Log in
-        </button>
-      </p>
-    </>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex flex-col justify-center items-center py-12">
+      <div className="w-full max-w-md">
+        <SignupForm onSignup={handleSignup} />
+        <p className="text-center mt-6 text-gray-600">
+          Already have an account?{' '}
+          <button className="text-green-600 hover:text-green-800 font-medium underline transition duration-200" onClick={() => navigate('/login')}>
+            Log in
+          </button>
+        </p>
+      </div>
+    </div>
   );
 }
