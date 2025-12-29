@@ -173,7 +173,7 @@ const RecipeSuggestions = ({ userId }) => {
 
                     const result = response.data;
 
-                    if (!response.ok || !result.success) {
+                    if (!result.success) {
                       setMessageModal({ show: true, message: "❌ Failed to save recipe.", success: false });
                     } else {
                       setMessageModal({ show: true, message: "✅ Recipe saved successfully!", success: true });

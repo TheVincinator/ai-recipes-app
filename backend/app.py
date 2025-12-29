@@ -1,20 +1,19 @@
-from flask import Flask, request, current_app, jsonify
+from flask import Flask, request, current_app, jsonify, send_from_directory, redirect
 from db import db, User, Ingredient, Allergy, Recipe
-from werkzeug.security import generate_password_hash, check_password_hash
 import requests
 import json
 from dotenv import load_dotenv
 import os
 from flask_cors import CORS
-from flask import send_from_directory
-from threading import Thread
-from ingredient_icon_generator.ingredient_icon_utils import ingredient_async_generate_icon
-from ingredient_icon_generator.allergy_icon_utils import allergy_async_generate_icon
-from ingredient_icon_locks import INGREDIENT_ICON_LOCKS
-from allergy_icon_locks import ALLERGY_ICON_LOCKS
+from improved_icon_utils import (
+    async_generate_icon, 
+    cleanup_icon_if_unused
+)
+from cloud_storage_config import storage
 import jwt
 from datetime import datetime, timedelta, timezone
 from functools import wraps
+from sqlalchemy import text
 
 ingredientOptions = ["beans", "beef", "butter", "cheese", "chicken", "eggs", "fish", "flour", "garlic", "herbs", "milk", "oil", "onions", "pepper", "pork", "rice", "salt", "sugar", "tomatoes", "vinegar", "water"]
 allergyOptions = ["peanuts", "tree nuts", "milk", "eggs", "wheat", "soy", "fish", "shellfish"]
@@ -25,16 +24,25 @@ app.url_map.strict_slashes = False
 
 CORS(app, origins=[
     "https://ai-recipes-app-amber.vercel.app",
-    "http://localhost:3000",
-    "http://localhost:3003",
-    "http://localhost:3004"
+    "http://localhost:3000"
 ])
 
 # Config
-load_dotenv() 
+# Only load .env in development
+if os.getenv('ENV') != 'production':
+    load_dotenv()
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+# Database configuration
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
+    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL or 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
 
 app.config['AI_API_KEY'] = os.getenv('AI_API_KEY')
 app.config['AI_API_URL'] = os.getenv('AI_API_URL')
@@ -188,42 +196,18 @@ def delete_user(current_user_id, user_id):
 
     # Ingredient icon cleanup
     for name, category in ingredient_data:
-        lock_key = f"{name}_{category}" if category else name
-        lock = INGREDIENT_ICON_LOCKS.get(lock_key)
-
-        if lock:
-            with lock:
-                count = Ingredient.query.filter_by(name=name, category=category).count()
-                if count == 0:
-                    image_path = f"./ingredient_icon_generator/assets/ingredients/generated_images/{name}_{category}.png" if category else f"./ingredient_icon_generator/assets/ingredients/generated_images/{name}.png"
-                    if os.path.exists(image_path):
-                        try:
-                            os.remove(image_path)
-                            print(f"[CLEANUP] Deleted unused ingredient icon: {image_path}", flush=True)
-                        except Exception as e:
-                            print(f"[ERROR] Could not delete ingredient image: {e}", flush=True)
+        if name not in ingredientOptions:
+            cleanup_icon_if_unused(name, category, 'ingredient', Ingredient, 'name')
 
     # Allergy icon cleanup
     for name, category in allergy_data:
-        lock_key = f"{name}_{category}" if category else name
-        lock = ALLERGY_ICON_LOCKS.get(lock_key)
-
-        if lock:
-            with lock:
-                count = Allergy.query.filter_by(allergy_name=name, allergy_category=category).count()
-                if count == 0:
-                    image_path = f"./ingredient_icon_generator/assets/allergies/generated_images/{name}_{category}.png" if category else f"./ingredient_icon_generator/assets/allergies/generated_images/{name}.png"
-                    if os.path.exists(image_path):
-                        try:
-                            os.remove(image_path)
-                            print(f"[CLEANUP] Deleted unused allergy icon: {image_path}", flush=True)
-                        except Exception as e:
-                            print(f"[ERROR] Could not delete allergy image: {e}", flush=True)
+        if name not in allergyOptions:
+            cleanup_icon_if_unused(name, category, 'allergy', Allergy, 'allergy_name')
 
     return success_response(user.to_dict())
 
 
-#accepts json format of an allergy that the user may have
+# Allergy Routes
 @app.route('/api/users/<int:user_id>/allergies/', methods=['POST'])
 @token_required
 def add_allergy_for_user(current_user_id, user_id):
@@ -240,30 +224,9 @@ def add_allergy_for_user(current_user_id, user_id):
         return failure_response('Allergy name is required', 400)
     
     name = body['allergy_name'].strip().lower()
-
     category = body.get('allergy_category', '').strip().lower()
 
-    # === Image generation path ===
-    if name not in allergyOptions:
-        image_folder = 'ingredient_icon_generator/assets/allergies/generated_images'
-        os.makedirs(image_folder, exist_ok=True)
-
-        if category:
-            image_filename = f"{name}_{category}.png"
-            lock_key = f"{name}_{category}"
-        else:
-            image_filename = f"{name}.png"
-            lock_key = name
-
-        image_path = os.path.join(image_folder, image_filename)
-
-        lock = ALLERGY_ICON_LOCKS[lock_key]
-        with lock:
-            if not os.path.exists(image_path):
-                app_obj = current_app._get_current_object()
-                Thread(target=allergy_async_generate_icon, args=(app_obj, name, category, image_path)).start()
-
-    # Save image filename (not full path) into database
+    # Create database entry
     new_allergy = Allergy(
         allergy_name=name,
         allergy_category=category,
@@ -272,8 +235,13 @@ def add_allergy_for_user(current_user_id, user_id):
     db.session.add(new_allergy)
     db.session.commit()
 
+    # Trigger async icon generation if custom
+    if name not in allergyOptions:
+        app_obj = current_app._get_current_object()
+        async_generate_icon(app_obj, name, category, 'allergy')
+
     return success_response(new_allergy.to_dict(), 201)
-    
+
 
 @app.route('/api/users/<int:user_id>/allergies/<int:allergy_id>/', methods=['PUT'])
 @token_required
@@ -286,16 +254,15 @@ def update_allergy_for_user(current_user_id, user_id, allergy_id):
         return failure_response("User not found")
 
     allergy = Allergy.query.filter_by(id=allergy_id, user_id=user_id).first()
-
     if allergy is None:
         return failure_response("Allergy not found")
 
     body = json.loads(request.data)
 
     old_name = allergy.allergy_name.lower()
+    old_category = allergy.allergy_category.lower() if allergy.allergy_category else ''
+    
     new_name = body.get('allergy_name', '').strip().lower()
-
-    old_category = allergy.allergy_category.lower()
     new_category = body.get('allergy_category', '').strip().lower()
 
     if not new_name:
@@ -303,47 +270,22 @@ def update_allergy_for_user(current_user_id, user_id, allergy_id):
     
     allergy.allergy_name = new_name
     allergy.allergy_category = new_category
+    db.session.commit()
 
+    # Handle icon changes
     is_old_custom = old_name not in allergyOptions
     is_new_custom = new_name not in allergyOptions
 
     if new_name != old_name or new_category != old_category:
-        # Delete old image if it was custom and no longer used
+        # Clean up old icon if custom and no longer used
         if is_old_custom:
-            if old_category:
-                old_image_path = f"./ingredient_icon_generator/assets/allergies/generated_images/{old_name}_{old_category}.png"
-                old_lock_key = f"{old_name}_{old_category}"
-            else:
-                old_image_path = f"./ingredient_icon_generator/assets/allergies/generated_images/{old_name}.png"
-                old_lock_key = old_name
-
-            lock = ALLERGY_ICON_LOCKS[old_lock_key]
-            with lock:
-                other_uses = Allergy.query.filter(
-                    Allergy.allergy_name == old_name,
-                    Allergy.allergy_category == old_category,
-                    Allergy.id != allergy.id
-                ).count()
-
-                if other_uses == 0 and os.path.exists(old_image_path):
-                    try:
-                        os.remove(old_image_path)
-                        current_app.logger.debug(f"Deleted old icon: {old_image_path}")
-                    except FileNotFoundError:
-                        current_app.logger.debug(f"Icon already deleted or missing: {old_image_path}")
-                    except OSError as e:
-                        current_app.logger.warning(f"Failed to delete icon '{old_image_path}': {e}")
-
-        # Generate new image if it's custom
+            cleanup_icon_if_unused(old_name, old_category, 'allergy', Allergy, 'allergy_name')
+        
+        # Generate new icon if custom
         if is_new_custom:
-            if new_category:
-                new_image_path = f"./ingredient_icon_generator/assets/allergies/generated_images/{new_name}_{new_category}.png"
-            else:
-                new_image_path = f"./ingredient_icon_generator/assets/allergies/generated_images/{new_name}.png"
             app_obj = current_app._get_current_object()
-            Thread(target=allergy_async_generate_icon, args=(app_obj, new_name, new_category, new_image_path)).start()
+            async_generate_icon(app_obj, new_name, new_category, 'allergy')
 
-    db.session.commit()
     return success_response(allergy.to_dict())
 
 
@@ -357,44 +299,20 @@ def delete_allergy_for_user(current_user_id, user_id, allergy_id):
     if user is None:
         return failure_response("User not found")
     
-    # Step 1: Find the ingredient
     allergy = Allergy.query.filter_by(id=allergy_id, user_id=user_id).first()
     if allergy is None:
         return failure_response("Allergy not found")
     
     name = allergy.allergy_name.lower()
+    category = allergy.allergy_category.lower() if allergy.allergy_category else ''
 
-    category = allergy.allergy_category.lower()
-
-    # Delete the ingredient
+    # Delete the allergy
     db.session.delete(allergy)
     db.session.commit()
 
-    # Step 2: Check if any other users have this ingredient
-    lock_key = f"{name}_{category}" if category else name
-    lock = ALLERGY_ICON_LOCKS[lock_key]
-
-    with lock:
-        other_uses = Allergy.query.filter_by(
-            allergy_name=name,
-            allergy_category=category
-        ).count()
-
-        if other_uses == 0:
-            # Step 3: Delete the image file
-            if category:
-                image_path = f"./ingredient_icon_generator/assets/allergies/generated_images/{name}_{category}.png"
-            else:
-                image_path = f"./ingredient_icon_generator/assets/allergies/generated_images/{name}.png"
-                
-            if os.path.exists(image_path):
-                try:
-                    os.remove(image_path)
-                    print(f"[CLEANUP] Deleted unused icon: {image_path}", flush=True)
-                except FileNotFoundError:
-                    print(f"[INFO] Icon already deleted by another thread: {image_path}", flush=True)
-                except Exception as e:
-                    print(f"[ERROR] Could not delete image: {e}", flush=True)
+    # Clean up icon if no longer used
+    if name not in allergyOptions:
+        cleanup_icon_if_unused(name, category, 'allergy', Allergy, 'allergy_name')
 
     return success_response(allergy.to_dict())
 
@@ -407,7 +325,7 @@ def get_allergies_for_user(current_user_id, user_id):
         
     user = User.query.get(user_id)
     if not user:
-        return success_response('User not found')
+        return failure_response('User not found')
 
     allergies = Allergy.query.filter_by(user_id=user_id).all()
     return success_response([allergy.to_dict() for allergy in allergies])
@@ -421,7 +339,6 @@ def add_ingredient(current_user_id, user_id):
         return failure_response("Unauthorized access", 403)
         
     user = User.query.get(user_id)
-
     if user is None:
         return failure_response("User not found")
 
@@ -431,40 +348,23 @@ def add_ingredient(current_user_id, user_id):
         return failure_response('Ingredient name is required', 400)
 
     name = body['name'].strip().lower()
-
     category = body.get('category', '').strip().lower()
 
-    # === Image generation path ===
-    if name not in ingredientOptions:
-        image_folder = 'ingredient_icon_generator/assets/ingredients/generated_images'
-        os.makedirs(image_folder, exist_ok=True)
-
-        if category:
-            image_filename = f"{name}_{category}.png"
-            lock_key = f"{name}_{category}"
-        else:
-            image_filename = f"{name}.png"
-            lock_key = name
-
-        image_path = os.path.join(image_folder, image_filename)
-
-        lock = INGREDIENT_ICON_LOCKS[lock_key]
-        with lock:
-            if not os.path.exists(image_path):
-                app_obj = current_app._get_current_object()
-                Thread(target=ingredient_async_generate_icon, args=(app_obj, name, category, image_path)).start()
-
-    # Save image filename (not full path) into database
+    # Create database entry
     new_ingredient = Ingredient(
         name=name,
         quantity=body.get('quantity', 0),
         unit=body.get('unit', 'units'),
-        category=body.get('category'),
+        category=category,
         user_id=user_id,
     )
-
     db.session.add(new_ingredient)
     db.session.commit()
+
+    # Trigger async icon generation if custom
+    if name not in ingredientOptions:
+        app_obj = current_app._get_current_object()
+        async_generate_icon(app_obj, name, category, 'ingredient')
 
     return success_response(new_ingredient.to_dict(), 201)
 
@@ -475,7 +375,7 @@ def get_user_ingredients(current_user_id, user_id):
     if current_user_id != user_id:
         return failure_response("Unauthorized access", 403)
         
-    if User.query.get(user_id) is None:    # Check if user exists
+    if User.query.get(user_id) is None:
         return failure_response("User not found")
     
     ingredients = Ingredient.query.filter_by(user_id=user_id).all()
@@ -513,9 +413,9 @@ def update_ingredient(current_user_id, user_id, ingredient_id):
     body = json.loads(request.data)
 
     old_name = ingredient.name.lower()
+    old_category = ingredient.category.lower() if ingredient.category else ''
+    
     new_name = body.get('name', '').strip().lower()
-
-    old_category = ingredient.category.lower()
     new_category = body.get('category', '').strip().lower()
 
     if not new_name:
@@ -526,47 +426,23 @@ def update_ingredient(current_user_id, user_id, ingredient_id):
     ingredient.category = new_category
     ingredient.quantity = body.get('quantity', ingredient.quantity)
     ingredient.unit = body.get('unit', ingredient.unit)
+    
+    db.session.commit()
 
+    # Handle icon changes
     is_old_custom = old_name not in ingredientOptions
     is_new_custom = new_name not in ingredientOptions
 
     if new_name != old_name or new_category != old_category:
-        # Delete old image if it was custom and no longer used
+        # Clean up old icon if custom and no longer used
         if is_old_custom:
-            if old_category:
-                old_image_path = f"./ingredient_icon_generator/assets/ingredients/generated_images/{old_name}_{old_category}.png"
-                old_lock_key = f"{old_name}_{old_category}"
-            else:
-                old_image_path = f"./ingredient_icon_generator/assets/ingredients/generated_images/{old_name}.png"
-                old_lock_key = old_name
-
-            lock = INGREDIENT_ICON_LOCKS[old_lock_key]
-            with lock:
-                other_uses = Ingredient.query.filter(
-                    Ingredient.name == old_name,
-                    Ingredient.category == old_category,
-                    Ingredient.id != ingredient.id
-                ).count()
-
-                if other_uses == 0 and os.path.exists(old_image_path):
-                    try:
-                        os.remove(old_image_path)
-                        current_app.logger.debug(f"Deleted old icon: {old_image_path}")
-                    except FileNotFoundError:
-                        current_app.logger.debug(f"Icon already deleted or missing: {old_image_path}")
-                    except OSError as e:
-                        current_app.logger.warning(f"Failed to delete icon '{old_image_path}': {e}")
-
-        # Generate new image if it's custom
+            cleanup_icon_if_unused(old_name, old_category, 'ingredient', Ingredient, 'name')
+        
+        # Generate new icon if custom
         if is_new_custom:
-            if new_category:
-                new_image_path = f"./ingredient_icon_generator/assets/ingredients/generated_images/{new_name}_{new_category}.png"
-            else:
-                new_image_path = f"./ingredient_icon_generator/assets/ingredients/generated_images/{new_name}.png"
             app_obj = current_app._get_current_object()
-            Thread(target=ingredient_async_generate_icon, args=(app_obj, new_name, new_category, new_image_path)).start()
+            async_generate_icon(app_obj, new_name, new_category, 'ingredient')
 
-    db.session.commit()
     return success_response(ingredient.to_dict(), 200)
 
 
@@ -580,48 +456,25 @@ def delete_ingredient(current_user_id, user_id, ingredient_id):
     if user is None:
         return failure_response("User not found")
     
-    # Step 1: Find the ingredient
     ingredient = Ingredient.query.filter_by(id=ingredient_id, user_id=user_id).first()
     if not ingredient:
         return failure_response("Ingredient not found")
 
     ingredient_name = ingredient.name.lower()
-
-    ingredient_category = ingredient.category.lower()
+    ingredient_category = ingredient.category.lower() if ingredient.category else ''
     
     # Delete the ingredient
     db.session.delete(ingredient)
     db.session.commit()
     
-    # Step 2: Check if any other users have this ingredient
-    lock_key = f"{ingredient_name}_{ingredient_category}" if ingredient_category else ingredient_name
-    lock = INGREDIENT_ICON_LOCKS[lock_key]
-
-    with lock:
-        other_uses = Ingredient.query.filter_by(
-            name=ingredient_name,
-            category=ingredient_category
-        ).count()
-
-        if other_uses == 0:
-            # Step 3: Delete the image file
-            if ingredient_category:
-                image_path = f"./ingredient_icon_generator/assets/ingredients/generated_images/{ingredient_name}_{ingredient_category}.png"
-            else:
-                image_path = f"./ingredient_icon_generator/assets/ingredients/generated_images/{ingredient_name}.png"
-                
-            if os.path.exists(image_path):
-                try:
-                    os.remove(image_path)
-                    print(f"[CLEANUP] Deleted unused icon: {image_path}", flush=True)
-                except FileNotFoundError:
-                    print(f"[INFO] Icon already deleted by another thread: {image_path}", flush=True)
-                except Exception as e:
-                    print(f"[ERROR] Could not delete image: {e}", flush=True)
+    # Clean up icon if no longer used
+    if ingredient_name not in ingredientOptions:
+        cleanup_icon_if_unused(ingredient_name, ingredient_category, 'ingredient', Ingredient, 'name')
     
     return success_response(ingredient.to_dict())
 
 
+# Asset Serving Routes
 @app.route('/api/assets/ingredients/default_images/<string:name>')
 def get_ingredient_default_image_by_name(name):
     filename = name.lower() + '.jpg'
@@ -630,20 +483,34 @@ def get_ingredient_default_image_by_name(name):
 
 @app.route('/api/assets/ingredients/generated_images/<string:combined>')
 def get_ingredient_generated_image_by_name(combined):
-    filename = f"{combined}.png"
-    path = os.path.join('ingredient_icon_generator', 'assets', 'ingredients', 'generated_images', filename)
-
-    if os.path.exists(path):
+    """Serve ingredient images (redirect to cloud URL or serve locally)"""
+    if storage.use_cloud:
+        # Redirect to cloud URL
+        key = f"ingredients/generated_images/{combined}.png"
+        if storage.exists(key):
+            return redirect(storage.get_url(key), code=302)
+        # Fallback to placeholder
         return send_from_directory(
-            'ingredient_icon_generator/assets/ingredients/generated_images',
-            filename
+            'ingredient_icon_generator/assets/ingredients/default_images',
+            'placeholder.png'
+        )
+    else:
+        # Serve locally (development)
+        filename = f"{combined}.png"
+        path = os.path.join('ingredient_icon_generator', 'assets', 
+                           'ingredients', 'generated_images', filename)
+        
+        if os.path.exists(path):
+            return send_from_directory(
+                'ingredient_icon_generator/assets/ingredients/generated_images',
+                filename
+            )
+        
+        return send_from_directory(
+            'ingredient_icon_generator/assets/ingredients/default_images',
+            'placeholder.png'
         )
 
-    # Fallback to placeholder
-    return send_from_directory(
-        'ingredient_icon_generator/assets/ingredients/default_images',
-        'placeholder.png'
-    )
 
 @app.route('/api/assets/allergies/default_images/<string:name>')
 def get_allergy_default_image_by_name(name):
@@ -653,20 +520,30 @@ def get_allergy_default_image_by_name(name):
 
 @app.route('/api/assets/allergies/generated_images/<string:combined>')
 def get_allergy_generated_image_by_name(combined):
-    filename = f"{combined}.png"
-    path = os.path.join('ingredient_icon_generator', 'assets', 'allergies', 'generated_images', filename)
-
-    if os.path.exists(path):
+    """Serve allergy images (redirect to cloud URL or serve locally)"""
+    if storage.use_cloud:
+        key = f"allergies/generated_images/{combined}.png"
+        if storage.exists(key):
+            return redirect(storage.get_url(key), code=302)
         return send_from_directory(
-            'ingredient_icon_generator/assets/allergies/generated_images',
-            filename
+            'ingredient_icon_generator/assets/allergies/default_images',
+            'placeholder.png'
         )
-
-    # Fallback to placeholder
-    return send_from_directory(
-        'ingredient_icon_generator/assets/allergies/default_images',
-        'placeholder.png'
-    )
+    else:
+        filename = f"{combined}.png"
+        path = os.path.join('ingredient_icon_generator', 'assets', 
+                           'allergies', 'generated_images', filename)
+        
+        if os.path.exists(path):
+            return send_from_directory(
+                'ingredient_icon_generator/assets/allergies/generated_images',
+                filename
+            )
+        
+        return send_from_directory(
+            'ingredient_icon_generator/assets/allergies/default_images',
+            'placeholder.png'
+        )
 
 
 # Search Route
@@ -917,6 +794,16 @@ def delete_recipe(current_user_id, user_id, recipe_id):
     return success_response(recipe.to_dict())
     
 
+# Health Check Endpoint
+@app.route('/health')
+def health():
+    try:
+        # Test database connection
+        db.session.execute(text("SELECT 1"))
+        return jsonify({'status': 'healthy', 'database': 'connected'}), 200
+    except Exception as e:
+        return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
+    
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

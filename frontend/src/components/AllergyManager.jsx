@@ -6,7 +6,7 @@ const allergyCategories = ["food", "environmental", "medication"];
 const commonAllergies = ["peanuts", "tree nuts", "milk", "eggs", "wheat", "soy", "fish", "shellfish"];
 
 function AllergyImage({ name, category }) {
-  const [src, setSrc] = useState('');
+  const [src, setSrc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [attempts, setAttempts] = useState(0);
   const maxAttempts = 10;
@@ -79,9 +79,9 @@ function AllergyImage({ name, category }) {
 
   return (
     <img
-      src={src}
+      src={src || `${process.env.REACT_APP_API_URL}/api/assets/allergies/default_images/placeholder`}
       alt={name}
-      className="w-8 h-8 rounded-full object-cover border border-gray-300"
+      className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
       onError={(e) => {
         e.target.onerror = null;
         e.target.src = `${process.env.REACT_APP_API_URL}/api/assets/allergies/default_images/placeholder`;

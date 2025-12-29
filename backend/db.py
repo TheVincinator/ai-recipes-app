@@ -1,18 +1,7 @@
-from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
-
-# Initialize Flask app
-app = Flask(__name__)
-
-# Configure database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pantry.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Initialize SQLAlchemy
-db = SQLAlchemy(app)
 
 # Define models
 class User(db.Model):
@@ -61,7 +50,7 @@ class Ingredient(db.Model):
             'name': self.name,
             'quantity': self.quantity,
             'unit': self.unit,
-            'category': self.category,
+            'category': self.category or '',
             'user_id': self.user_id
         }
     
@@ -71,7 +60,7 @@ class Allergy(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     allergy_name = db.Column(db.String, nullable=False)
-    allergy_category = db.Column(db.String, nullable=False)  
+    allergy_category = db.Column(db.String, nullable=True)  # Changed to nullable=True
 
     # Foreign key for relationship with User table
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -80,7 +69,7 @@ class Allergy(db.Model):
         return {
             'id': self.id,
             'allergy_name': self.allergy_name,
-            'allergy_category': self.allergy_category,
+            'allergy_category': self.allergy_category or '',
             "user_id": self.user_id
         }
     
@@ -102,8 +91,3 @@ class Recipe(db.Model):
             'recipe': self.recipe,
             "user_id": self.user_id
         }
-        
-
-# Create all tables
-with app.app_context():
-    db.create_all()

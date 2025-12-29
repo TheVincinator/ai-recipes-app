@@ -1,0 +1,22 @@
+# Don't upload these to AWS
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.db
+*.sqlite
+*.sqlite3
+venv/
+env/
+.env
+.venv
+*.log
+.DS_Store
+.vscode/
+.idea/
+instance/
+ingredient_icon_generator/assets/ingredients/generated_images/*
+ingredient_icon_generator/assets/allergies/generated_images/*
+site.db
+pantry.db
