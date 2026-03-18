@@ -647,7 +647,10 @@ def get_recipe_suggestions(current_user_id, user_id):
 
         if response.status_code == 200:
             api_response = response.json()
-            recipes = api_response['choices'][0]['message']['content']
+            choices = api_response.get('choices')
+            if not choices or not choices[0].get('message', {}).get('content'):
+                return failure_response('Invalid response from AI API', 500)
+            recipes = choices[0]['message']['content']
             return success_response({
                 'ingredients_used': [i.name for i in ingredients],
                 'recipes': recipes,
@@ -772,7 +775,7 @@ def rename_recipe(current_user_id, user_id, recipe_id):
     return success_response(recipe.to_dict())
 
 
-@app.route('/api/users/<int:user_id>/saved-recipes/<int:recipe_id>/', methods=['DELETE'])
+@app.route('/api/users/<int:user_id>/saved-recipes/<int:recipe_id>', methods=['DELETE'])
 @token_required
 def delete_recipe(current_user_id, user_id, recipe_id):
     if current_user_id != user_id:

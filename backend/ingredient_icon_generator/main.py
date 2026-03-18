@@ -37,23 +37,10 @@ try:
 except Exception as e:
     print(f"[YOLO WARNING] Could not add safe globals: {e}", flush=True)
 
-# Load YOLO - patch torch.load to use weights_only=False
+# Load YOLO - safe globals registered above are sufficient for PyTorch 2.6+
 try:
-    # Temporarily override torch.load to disable weights_only check
-    original_load = torch.load
-    def patched_load(*args, **kwargs):
-        kwargs['weights_only'] = False  # Disable security check for trusted model
-        return original_load(*args, **kwargs)
-    
-    torch.load = patched_load
-    
-    try:
-        net = YOLO(MODEL_FILE)
-        print(f"[YOLO] Model loaded successfully from {MODEL_FILE}", flush=True)
-    finally:
-        # Restore original torch.load
-        torch.load = original_load
-        
+    net = YOLO(MODEL_FILE)
+    print(f"[YOLO] Model loaded successfully from {MODEL_FILE}", flush=True)
 except Exception as e:
     print(f"[YOLO ERROR] Failed to load model: {e}", flush=True)
     net = None
@@ -127,8 +114,10 @@ def detect_objects_ultralytics(image_url, user_input):
                 print(f"[DETECT] Found: {detected_class} (confidence: {score:.2f})", flush=True)
 
                 # --- FILTER BY CONFIDENCE AND USER INPUT ---
-                if score > 0.25 and detected_class == user_input.lower():
-                    print(f"[DETECT] ✓ Match! {detected_class} matches {user_input}", flush=True)
+                similarity = process.extractOne(user_input.lower(), [detected_class])
+                fuzzy_score = similarity[1] if similarity else 0
+                if score > 0.5 and fuzzy_score >= 60:
+                    print(f"[DETECT] ✓ Match! {detected_class} matches {user_input} (conf={score:.2f}, fuzzy={fuzzy_score})", flush=True)
                     x1, y1, x2, y2 = box.xyxy[0].tolist()
                     boxes.append([x1, y1, x2 - x1, y2 - y1])
                     confidences.append(score)
@@ -277,7 +266,7 @@ def user_input_flow(user_input, textbox_id):
     query = user_input
 
     if query.strip():
-        icon = get_ingredient_icon(query)
+        icon = get_ingredient_icon(query, category=None)
 
         # Local path (optional)
         filename = os.path.join(OUTPUT_FOLDER, f"ingredient_{textbox_id}.png")
@@ -292,10 +281,11 @@ def user_input_flow(user_input, textbox_id):
         # Upload to cloud storage if enabled
         if storage.use_cloud:
             from io import BytesIO
+            from improved_icon_utils import build_storage_key
             buffer = BytesIO()
             icon.save(buffer, format="PNG")
             buffer.seek(0)
-            key = f"ingredients/generated_images/ingredient_{textbox_id}.png"
+            key = build_storage_key(query, None, icon_type='ingredient')
             success = storage.upload_image(buffer, key)
             if success:
                 print(f"[UPLOAD] Uploaded {key} to cloud storage")

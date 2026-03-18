@@ -12,8 +12,8 @@ export default function EditAllergyModal({ isOpen, onClose, allergy, onSave }) {
   useEffect(() => {
     if (allergy) {
       setForm({
-        allergy_name: commonAllergies.includes(allergy.allergy_name) ? allergy.allergy_name : '',
-        allergy_category: allergyCategories.includes(allergy.allergy_category) ? allergy.allergy_category : '',
+        allergy_name: allergy.allergy_name || '',
+        allergy_category: allergy.allergy_category || '',
       });
     }
   }, [allergy]);
@@ -47,8 +47,8 @@ export default function EditAllergyModal({ isOpen, onClose, allergy, onSave }) {
   const handleCancel = () => {
     if (allergy) {
       setForm({
-        allergy_name: commonAllergies.includes(allergy.allergy_name) ? allergy.allergy_name : '',
-        allergy_category: allergyCategories.includes(allergy.allergy_category) ? allergy.allergy_category : '',
+        allergy_name: allergy.allergy_name || '',
+        allergy_category: allergy.allergy_category || '',
       });
     }
     onClose();

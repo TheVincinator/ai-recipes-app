@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../axios';
 
 const SignupForm = ({ onSignup }) => {
   const [form, setForm] = useState({ username: '', email: '', password: '' });
@@ -13,7 +13,7 @@ const SignupForm = ({ onSignup }) => {
     e.preventDefault();
     setError('');
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/users/`, form);
+      const response = await api.post('/api/users/', form);
       const { token, user } = response.data.data;
       localStorage.setItem('token', token);
       onSignup(user);
