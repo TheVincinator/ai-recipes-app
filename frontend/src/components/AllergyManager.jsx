@@ -1,98 +1,14 @@
 import api from '../axios';
 import { useState, useEffect } from 'react';
 import EditAllergyModal from './EditAllergyModal';
+import AssetImage from './AssetImage';
 
 const allergyCategories = ["food", "environmental", "medication"];
 const commonAllergies = ["peanuts", "tree nuts", "milk", "eggs", "wheat", "soy", "fish", "shellfish"];
 
-function AllergyImage({ name, category }) {
-  const [src, setSrc] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [attempts, setAttempts] = useState(0);
-  const maxAttempts = 10;
-
-  const generateImageUrl = () => {
-    const formattedName = category?.trim()
-      ? `${name.trim().toLowerCase()}_${category.trim().toLowerCase()}`
-      : name.trim().toLowerCase();
-    return `${process.env.REACT_APP_API_URL}/api/assets/allergies/generated_images/${formattedName}?&t=${Date.now()}`;
-  };
-  
-
-  useEffect(() => {
-  let interval;
-
-  // Reset loading and attempts when name or category changes
-  setLoading(true);
-  setAttempts(0);
-
-  const checkImage = () => {
-    const img = new Image();
-    const newSrc = generateImageUrl();
-
-    img.onload = () => {
-      if (!img.src.includes('placeholder')) {
-        setSrc(newSrc);
-        setLoading(false);
-        clearInterval(interval);
-      } else {
-        retry();
-      }
-    };
-
-    img.onerror = () => {
-      retry();
-    };
-
-    img.src = newSrc;
-  };
-
-  const retry = () => {
-    setAttempts(prev => {
-      const next = prev + 1;
-      if (next >= maxAttempts) {
-        setLoading(false);
-        clearInterval(interval);
-      }
-      return next;
-    });
-  };
-
-  checkImage();
-  interval = setInterval(checkImage, 1000);
-
-  return () => clearInterval(interval);
-}, [name, category]);
-
-
-  if (loading) {
-    return (
-      <div className="w-8 h-8 flex items-center justify-center">
-        <div className="flex space-x-1">
-          <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-          <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-          <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <img
-      src={src || `${process.env.REACT_APP_API_URL}/api/assets/allergies/default_images/placeholder`}
-      alt={name}
-      className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-      onError={(e) => {
-        e.target.onerror = null;
-        e.target.src = `${process.env.REACT_APP_API_URL}/api/assets/allergies/default_images/placeholder`;
-      }}
-    />
-  );
-}
-
-
 export default function AllergyManager({ userId }) {
   const [allergies, setAllergies] = useState([]);
+  const [formError, setFormError] = useState('');
   const [form, setForm] = useState({ allergy_name: '', allergy_category: '' });
   const [formDebounced, setFormDebounced] = useState(form);
   const [editingAllergy, setEditingAllergy] = useState(null);
@@ -144,9 +60,10 @@ export default function AllergyManager({ userId }) {
     );
   
     if (exists) {
-      alert("This allergy already exists.");
+      setFormError("This allergy already exists.");
       return;
     }
+    setFormError('');
   
     const allergyData = {
       allergy_name: allergyName,
@@ -187,11 +104,10 @@ export default function AllergyManager({ userId }) {
       .then(response => {
         const data = response.data;
         if (!data.success) {
-          alert("Failed to update allergy on server.");
-          // Optionally revert UI update or refresh allergies from server
+          setFormError("Failed to update allergy on server.");
         }
       })
-      .catch(() => alert("Network error while updating allergy."));
+      .catch(() => setFormError("Network error while updating allergy."));
     
     closeEditModal();
   };
@@ -259,6 +175,11 @@ export default function AllergyManager({ userId }) {
             </div>
           </div>
 
+          {formError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-red-800 text-sm">{formError}</p>
+            </div>
+          )}
           <button
             type="submit"
             disabled={!isValid()}
@@ -293,8 +214,9 @@ export default function AllergyManager({ userId }) {
                       }}
                     />
                   ) : (
-                    <AllergyImage 
-                      key={allergy.id + "-" + allergy.allergy_name}
+                    <AssetImage
+                      assetType="allergies"
+                      maxAttempts={10}
                       name={allergy.allergy_name}
                       category={allergy.allergy_category}
                     />

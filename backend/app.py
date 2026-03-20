@@ -55,7 +55,7 @@ with app.app_context():
 
 
 def failure_response(message, code=404):
-    return json.dumps({"error": message}), code, {'Content-Type': 'application/json'}
+    return json.dumps({"success": False, "error": message}), code, {'Content-Type': 'application/json'}
 
 
 def success_response(data, code=200):
@@ -81,6 +81,16 @@ def verify_token(token):
         return None
 
 
+def authorize_user(f):
+    @wraps(f)
+    def decorated(current_user_id, *args, **kwargs):
+        user_id = kwargs.get('user_id')
+        if user_id is not None and current_user_id != user_id:
+            return failure_response("Unauthorized access", 403)
+        return f(current_user_id, *args, **kwargs)
+    return decorated
+
+
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -103,7 +113,7 @@ def token_required(f):
 # User Routes
 @app.route('/api/users/', methods=['POST'])
 def create_user():
-    body = json.loads(request.data)
+    body = request.get_json(silent=True)
     
     if not body or not body.get('username') or not body.get('email') or not body.get('password'):
         return failure_response('Missing required fields', 400)
@@ -132,10 +142,8 @@ def create_user():
 
 @app.route('/api/users/<int:user_id>/')
 @token_required
+@authorize_user
 def get_user(current_user_id, user_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
 
     if user is None:
@@ -146,16 +154,14 @@ def get_user(current_user_id, user_id):
 
 @app.route('/api/users/<int:user_id>/', methods=['PUT'])
 @token_required
+@authorize_user
 def update_user(current_user_id, user_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
 
     if user is None:
         return failure_response("User not found")
 
-    body = json.loads(request.data)
+    body = request.get_json(silent=True)
     
     if 'username' in body:
         existing_user = User.query.filter_by(username=body['username']).first()
@@ -178,10 +184,8 @@ def update_user(current_user_id, user_id):
 
 @app.route('/api/users/<int:user_id>/', methods=['DELETE'])
 @token_required
+@authorize_user
 def delete_user(current_user_id, user_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
 
     if user is None:
@@ -210,15 +214,13 @@ def delete_user(current_user_id, user_id):
 # Allergy Routes
 @app.route('/api/users/<int:user_id>/allergies/', methods=['POST'])
 @token_required
+@authorize_user
 def add_allergy_for_user(current_user_id, user_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
     if user is None:
         return failure_response("User not found")
 
-    body = json.loads(request.data)
+    body = request.get_json(silent=True)
 
     if not body or not body.get('allergy_name'):
         return failure_response('Allergy name is required', 400)
@@ -245,10 +247,8 @@ def add_allergy_for_user(current_user_id, user_id):
 
 @app.route('/api/users/<int:user_id>/allergies/<int:allergy_id>/', methods=['PUT'])
 @token_required
+@authorize_user
 def update_allergy_for_user(current_user_id, user_id, allergy_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
     if user is None:
         return failure_response("User not found")
@@ -257,7 +257,7 @@ def update_allergy_for_user(current_user_id, user_id, allergy_id):
     if allergy is None:
         return failure_response("Allergy not found")
 
-    body = json.loads(request.data)
+    body = request.get_json(silent=True)
 
     old_name = allergy.allergy_name.lower()
     old_category = allergy.allergy_category.lower() if allergy.allergy_category else ''
@@ -291,10 +291,8 @@ def update_allergy_for_user(current_user_id, user_id, allergy_id):
 
 @app.route('/api/users/<int:user_id>/allergies/<int:allergy_id>/', methods=['DELETE'])
 @token_required
+@authorize_user
 def delete_allergy_for_user(current_user_id, user_id, allergy_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
     if user is None:
         return failure_response("User not found")
@@ -319,10 +317,8 @@ def delete_allergy_for_user(current_user_id, user_id, allergy_id):
 
 @app.route('/api/users/<int:user_id>/allergies/')
 @token_required
+@authorize_user
 def get_allergies_for_user(current_user_id, user_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
     if not user:
         return failure_response('User not found')
@@ -334,15 +330,13 @@ def get_allergies_for_user(current_user_id, user_id):
 # Ingredient Routes
 @app.route('/api/users/<int:user_id>/ingredients/', methods=['POST'])
 @token_required
+@authorize_user
 def add_ingredient(current_user_id, user_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
     if user is None:
         return failure_response("User not found")
 
-    body = json.loads(request.data)
+    body = request.get_json(silent=True)
     
     if not body or not body.get('name'):
         return failure_response('Ingredient name is required', 400)
@@ -371,10 +365,8 @@ def add_ingredient(current_user_id, user_id):
 
 @app.route('/api/users/<int:user_id>/ingredients/')
 @token_required
+@authorize_user
 def get_user_ingredients(current_user_id, user_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     if User.query.get(user_id) is None:
         return failure_response("User not found")
     
@@ -384,10 +376,8 @@ def get_user_ingredients(current_user_id, user_id):
 
 @app.route('/api/users/<int:user_id>/ingredients/<int:ingredient_id>/')
 @token_required
+@authorize_user
 def get_ingredient(current_user_id, user_id, ingredient_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     ingredient = Ingredient.query.filter_by(id=ingredient_id, user_id=user_id).first()
 
     if ingredient is None:
@@ -398,10 +388,8 @@ def get_ingredient(current_user_id, user_id, ingredient_id):
 
 @app.route('/api/users/<int:user_id>/ingredients/<int:ingredient_id>/', methods=['PUT'])
 @token_required
+@authorize_user
 def update_ingredient(current_user_id, user_id, ingredient_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
     if user is None:
         return failure_response("User not found")
@@ -410,7 +398,7 @@ def update_ingredient(current_user_id, user_id, ingredient_id):
     if ingredient is None:
         return failure_response("Ingredient not found")
 
-    body = json.loads(request.data)
+    body = request.get_json(silent=True)
 
     old_name = ingredient.name.lower()
     old_category = ingredient.category.lower() if ingredient.category else ''
@@ -448,10 +436,8 @@ def update_ingredient(current_user_id, user_id, ingredient_id):
 
 @app.route('/api/users/<int:user_id>/ingredients/<int:ingredient_id>/', methods=['DELETE'])
 @token_required
+@authorize_user
 def delete_ingredient(current_user_id, user_id, ingredient_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
     if user is None:
         return failure_response("User not found")
@@ -483,17 +469,14 @@ def get_ingredient_default_image_by_name(name):
 
 @app.route('/api/assets/ingredients/generated_images/<string:combined>')
 def get_ingredient_generated_image_by_name(combined):
-    """Serve ingredient images (redirect to cloud URL or serve locally)"""
+    """Serve ingredient images (proxy from cloud or serve locally)"""
     if storage.use_cloud:
-        # Redirect to cloud URL
         key = f"ingredients/generated_images/{combined}.png"
-        if storage.exists(key):
-            return redirect(storage.get_url(key), code=302)
-        # Fallback to placeholder
-        return send_from_directory(
-            'ingredient_icon_generator/assets/ingredients/default_images',
-            'placeholder.png'
-        )
+        url = storage.get_url(key)
+        r = requests.get(url)
+        if r.status_code == 200:
+            return r.content, 200, {'Content-Type': 'image/png', 'Cache-Control': 'max-age=31536000'}
+        return '', 404
     else:
         # Serve locally (development)
         filename = f"{combined}.png"
@@ -520,15 +503,14 @@ def get_allergy_default_image_by_name(name):
 
 @app.route('/api/assets/allergies/generated_images/<string:combined>')
 def get_allergy_generated_image_by_name(combined):
-    """Serve allergy images (redirect to cloud URL or serve locally)"""
+    """Serve allergy images (proxy from cloud or serve locally)"""
     if storage.use_cloud:
         key = f"allergies/generated_images/{combined}.png"
-        if storage.exists(key):
-            return redirect(storage.get_url(key), code=302)
-        return send_from_directory(
-            'ingredient_icon_generator/assets/allergies/default_images',
-            'placeholder.png'
-        )
+        url = storage.get_url(key)
+        r = requests.get(url)
+        if r.status_code == 200:
+            return r.content, 200, {'Content-Type': 'image/png', 'Cache-Control': 'max-age=31536000'}
+        return '', 404
     else:
         filename = f"{combined}.png"
         path = os.path.join('ingredient_icon_generator', 'assets', 
@@ -549,10 +531,8 @@ def get_allergy_generated_image_by_name(combined):
 # Search Route
 @app.route('/api/users/<int:user_id>/ingredients/search/')
 @token_required
+@authorize_user
 def search_ingredients(current_user_id, user_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     if User.query.get(user_id) is None:    # Check if user exists
         return failure_response("User not found")
     
@@ -574,7 +554,7 @@ def search_ingredients(current_user_id, user_id):
 # Authentication Route
 @app.route('/api/auth/login/', methods=['POST'])
 def login():
-    body = json.loads(request.data)
+    body = request.get_json(silent=True)
     
     if not body or not body.get('username') or not body.get('password'):
         return failure_response('Missing username or password', 400)
@@ -601,10 +581,8 @@ def logout():
 # Recipe suggestion route using AI
 @app.route('/api/users/<int:user_id>/recipe-suggestions/')
 @token_required
+@authorize_user
 def get_recipe_suggestions(current_user_id, user_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
 
     if user is None:
@@ -703,16 +681,13 @@ def build_recipe_prompt(ingredients, allergies, meal_type=None, cuisine=None, di
 
     prompt += " Please suggest a few recipes that fit these criteria, including ingredients and basic instructions."
 
-    print(prompt)
     return prompt
 
 
 @app.route('/api/users/<int:user_id>/saved-recipes/')
 @token_required
+@authorize_user
 def get_recipes(current_user_id, user_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     if User.query.get(user_id) is None:
         return failure_response("User not found")
     
@@ -723,16 +698,14 @@ def get_recipes(current_user_id, user_id):
 
 @app.route('/api/users/<int:user_id>/saved-recipes/', methods=['POST'])
 @token_required
+@authorize_user
 def save_recipe(current_user_id, user_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
 
     if user is None:
         return failure_response("User not found")
     
-    body = json.loads(request.data)
+    body = request.get_json(silent=True)
     
     if body is None or 'recipe' not in body:
         return failure_response('Missing recipe data in request body', 400)
@@ -754,10 +727,8 @@ def save_recipe(current_user_id, user_id):
 
 @app.route('/api/users/<int:user_id>/saved-recipes/<int:recipe_id>', methods=['PUT'])
 @token_required
+@authorize_user
 def rename_recipe(current_user_id, user_id, recipe_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
     if not user:
         return failure_response("User not found", 404)
@@ -766,7 +737,7 @@ def rename_recipe(current_user_id, user_id, recipe_id):
     if recipe is None:
         return failure_response("Recipe not found", 404)
 
-    body = json.loads(request.data)
+    body = request.get_json(silent=True)
     new_name = body.get('name', '')
 
     recipe.name = new_name
@@ -777,10 +748,8 @@ def rename_recipe(current_user_id, user_id, recipe_id):
 
 @app.route('/api/users/<int:user_id>/saved-recipes/<int:recipe_id>', methods=['DELETE'])
 @token_required
+@authorize_user
 def delete_recipe(current_user_id, user_id, recipe_id):
-    if current_user_id != user_id:
-        return failure_response("Unauthorized access", 403)
-        
     user = User.query.get(user_id)
 
     if user is None:

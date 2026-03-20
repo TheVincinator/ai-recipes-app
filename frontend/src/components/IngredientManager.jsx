@@ -4,100 +4,15 @@ import AllergyManager from './AllergyManager';
 import EditIngredientModal from './EditIngredientModal';
 import RecipeSuggestions from './RecipeSuggestions';
 import CreatableSelect from 'react-select/creatable';
+import AssetImage from './AssetImage';
 
 const unitOptions = ["g", "kg", "ml", "l", "cup", "tbsp", "tsp", "oz", "lb"];
 const ingredientOptions = ["beans", "beef", "butter", "cheese", "chicken", "eggs", "fish", "flour", "garlic", "herbs", "milk", "oil", "onions", "pepper", "pork", "rice", "salt", "sugar", "tomatoes", "vinegar", "water"];
 const categoryOptions = ["vegetable", "fruit", "meat", "dairy", "grain", "spice", "condiment", "frozen"];
 
-function IngredientImage({ name, category }) {
-  const [src, setSrc] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [attempts, setAttempts] = useState(0);
-  const maxAttempts = 20;
-
-  const generateImageUrl = () => {
-    const formattedName = category
-      ? `${name.toLowerCase()}_${category.toLowerCase()}`
-      : name.toLowerCase();
-    return `${process.env.REACT_APP_API_URL}/api/assets/ingredients/generated_images/${formattedName}?&t=${Date.now()}`;
-  };
-  
-
-  useEffect(() => {
-  let interval;
-
-  // Reset loading and attempts when name or category changes
-  setLoading(true);
-  setAttempts(0);
-
-  const checkImage = () => {
-    const img = new Image();
-    const newSrc = generateImageUrl();
-
-    img.onload = () => {
-      if (!img.src.includes('placeholder')) {
-        setSrc(newSrc);
-        setLoading(false);
-        clearInterval(interval);
-      } else {
-        retry();
-      }
-    };
-
-    img.onerror = () => {
-      retry();
-    };
-
-    img.src = newSrc;
-  };
-
-  const retry = () => {
-    setAttempts(prev => {
-      const next = prev + 1;
-      if (next >= maxAttempts) {
-        setLoading(false);
-        clearInterval(interval);
-      }
-      return next;
-    });
-  };
-
-  checkImage();
-  interval = setInterval(checkImage, 1000);
-
-  return () => clearInterval(interval);
-}, [name, category]);
-
-
-  if (loading) {
-    return (
-      <div className="w-8 h-8 flex items-center justify-center">
-        <div className="flex space-x-1">
-          <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-          <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-          <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <img
-      src={src || `${process.env.REACT_APP_API_URL}/api/assets/ingredients/default_images/placeholder`}
-      alt={name}
-      className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-      onError={(e) => {
-        e.target.onerror = null;
-        e.target.src = `${process.env.REACT_APP_API_URL}/api/assets/ingredients/default_images/placeholder`;
-      }}
-    />
-  );
-}
-
-
-
 export default function IngredientManager({ user }) {
   const [form, setForm] = useState({ name: '', quantity: '', unit: '', category: '' });
+  const [formError, setFormError] = useState('');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [ingredients, setIngredients] = useState([]);
@@ -183,9 +98,10 @@ export default function IngredientManager({ user }) {
     );
 
     if (exists) {
-      alert("This ingredient already exists.");
+      setFormError("This ingredient already exists.");
       return;
     }
+    setFormError('');
 
     const ingredientData = {
       ...form,
@@ -201,13 +117,14 @@ export default function IngredientManager({ user }) {
         if (data.success) {
           setIngredients((prev) => [...prev, data.data]);
           setForm({ name: '', quantity: '', unit: '', category: '' });
+          setFormError('');
         } else {
-          alert("Failed to add ingredient: " + (data.message || "Unknown error"));
+          setFormError("Failed to add ingredient: " + (data.message || "Unknown error"));
         }
       })
       .catch((error) => {
         console.error('Add ingredient failed:', error);
-        alert("Failed to add ingredient.");
+        setFormError("Failed to add ingredient.");
       });
   };
 
@@ -387,6 +304,11 @@ export default function IngredientManager({ user }) {
             >
               ➕ Add Ingredient
             </button>
+            {formError && (
+              <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-800 text-sm">{formError}</p>
+              </div>
+            )}
           </form>
 
           {/* Ingredient List */}
@@ -410,7 +332,9 @@ export default function IngredientManager({ user }) {
                         }}
                       />
                     ) : (
-                      <IngredientImage 
+                      <AssetImage
+                        assetType="ingredients"
+                        maxAttempts={20}
                         name={ingredient.name}
                         category={ingredient.category}
                       />

@@ -57,7 +57,7 @@ const SavedRecipes = ({ user }) => {
         throw new Error(result.error || "Failed to delete recipe.");
       }
     } catch (err) {
-      alert(`Error deleting recipe: ${err.message}`);
+      setMessageModal({ show: true, message: `Error deleting recipe: ${err.message}`, success: false });
       // On error, refetch recipes to sync UI
       try {
         const resp = await api.get(`/api/users/${userId}/saved-recipes/`);
@@ -114,7 +114,7 @@ const SavedRecipes = ({ user }) => {
 
           return (
             <article
-              key={recipe.id || recipe.name}
+              key={recipe.id}
               onClick={() => setSelectedRecipe(recipe)}
               tabIndex={0}
               role="button"
@@ -261,10 +261,10 @@ const SavedRecipes = ({ user }) => {
                     setShowRenameModal(false);
                     setRecipeBeingRenamed(null);
                   } else {
-                    alert("Failed to rename recipe.");
+                    setMessageModal({ show: true, message: "Failed to rename recipe.", success: false });
                   }
                 } catch {
-                  alert("Network error while renaming recipe.");
+                  setMessageModal({ show: true, message: "Network error while renaming recipe.", success: false });
                 }
               }}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
