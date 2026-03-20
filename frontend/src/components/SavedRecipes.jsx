@@ -10,6 +10,7 @@ const SavedRecipes = ({ user }) => {
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renameInput, setRenameInput] = useState("");
   const [recipeBeingRenamed, setRecipeBeingRenamed] = useState(null);
+  const [messageModal, setMessageModal] = useState({ show: false, message: '', success: true });
 
   useEffect(() => {
     async function fetchSavedRecipes() {
@@ -276,6 +277,22 @@ const SavedRecipes = ({ user }) => {
       )}
 
       {/* Animate fade-in styles */}
+      {messageModal.show && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg max-w-sm w-full text-center">
+            <p className={`text-lg font-medium mb-4 ${messageModal.success ? 'text-green-700' : 'text-red-700'}`}>
+              {messageModal.message}
+            </p>
+            <button
+              onClick={() => setMessageModal({ show: false, message: '', success: true })}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg transition duration-200"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         @keyframes fadeIn {
           from {
