@@ -6,9 +6,7 @@ import RecipeSuggestions from './RecipeSuggestions';
 import CreatableSelect from 'react-select/creatable';
 import AssetImage from './AssetImage';
 
-const unitOptions = ["g", "kg", "ml", "l", "cup", "tbsp", "tsp", "oz", "lb"];
-const ingredientOptions = ["beans", "beef", "butter", "cheese", "chicken", "eggs", "fish", "flour", "garlic", "herbs", "milk", "oil", "onions", "pepper", "pork", "rice", "salt", "sugar", "tomatoes", "vinegar", "water"];
-const categoryOptions = ["vegetable", "fruit", "meat", "dairy", "grain", "spice", "condiment", "frozen"];
+import { ingredientOptions, categoryOptions, unitOptions } from '../constants';
 
 export default function IngredientManager({ user }) {
   const [form, setForm] = useState({ name: '', quantity: '', unit: '', category: '' });

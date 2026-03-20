@@ -5,10 +5,8 @@ import requests
 from io import BytesIO
 import os
 from fuzzywuzzy import process
-import argparse
 from dotenv import load_dotenv
 import torch
-from cloud_storage_config import storage
 
 load_dotenv()
 
@@ -33,14 +31,12 @@ try:
         torch.nn.modules.pooling.MaxPool2d,
         torch.nn.modules.upsampling.Upsample
     ])
-    print("[YOLO] Added safe globals for PyTorch 2.6", flush=True)
 except Exception as e:
     print(f"[YOLO WARNING] Could not add safe globals: {e}", flush=True)
 
 # Load YOLO - safe globals registered above are sufficient for PyTorch 2.6+
 try:
     net = YOLO(MODEL_FILE)
-    print(f"[YOLO] Model loaded successfully from {MODEL_FILE}", flush=True)
 except Exception as e:
     print(f"[YOLO ERROR] Failed to load model: {e}", flush=True)
     net = None
@@ -78,54 +74,38 @@ def detect_objects_ultralytics(image_url, user_input):
     """
     Detect objects in the image that match the user_input, using Ultralytics YOLO.
     """
-    print(f"[DETECT] Starting detection for '{user_input}' from {image_url[:50]}...", flush=True)
-    
     if net is None:
         print(f"[DETECT ERROR] YOLO model is None!", flush=True)
         response = requests.get(image_url)
         pil_image = Image.open(BytesIO(response.content)).convert("RGB")
         return [], [], [], pil_image
-    
+
     try:
         response = requests.get(image_url)
-        print(f"[DETECT] Image downloaded, status: {response.status_code}", flush=True)
-        
         pil_image = Image.open(BytesIO(response.content)).convert("RGB")
-        print(f"[DETECT] Image opened, size: {pil_image.size}", flush=True)
-        
         img_np = np.array(pil_image)
-        print(f"[DETECT] Converted to numpy array, shape: {img_np.shape}", flush=True)
-
-        print(f"[DETECT] Running YOLO prediction...", flush=True)
         results = net.predict(img_np, verbose=False)
-        print(f"[DETECT] YOLO prediction complete, got {len(results)} results", flush=True)
-        
+
         boxes = []
         confidences = []
         class_ids = []
 
         for r in results:
-            print(f"[DETECT] Processing result with {len(r.boxes)} boxes", flush=True)
             for box in r.boxes:
                 cls_id = int(box.cls[0])
                 score = float(box.conf[0])
                 detected_class = classes[cls_id].lower() if cls_id < len(classes) else "unknown"
-                
-                print(f"[DETECT] Found: {detected_class} (confidence: {score:.2f})", flush=True)
 
-                # --- FILTER BY CONFIDENCE AND USER INPUT ---
                 similarity = process.extractOne(user_input.lower(), [detected_class])
                 fuzzy_score = similarity[1] if similarity else 0
                 if score > 0.5 and fuzzy_score >= 60:
-                    print(f"[DETECT] ✓ Match! {detected_class} matches {user_input} (conf={score:.2f}, fuzzy={fuzzy_score})", flush=True)
                     x1, y1, x2, y2 = box.xyxy[0].tolist()
                     boxes.append([x1, y1, x2 - x1, y2 - y1])
                     confidences.append(score)
                     class_ids.append(cls_id)
 
-        print(f"[DETECT] Found {len(boxes)} matching boxes", flush=True)
         return boxes, confidences, class_ids, pil_image
-        
+
     except Exception as e:
         print(f"[DETECT ERROR] Exception: {type(e).__name__}: {e}", flush=True)
         import traceback
@@ -211,16 +191,13 @@ def find_best_match(user_input, options):
     Finds the best matching word if the word differs slightly or if there was a typo.
     """
     if not options:
-        print(f"[MATCH] No options available", flush=True)
         return None
-    
+
     result = process.extractOne(user_input, options)
     if result is None:
         return None
-        
+
     match, score = result
-    print(f"[MATCH] Best match: {match} (score: {score})", flush=True)
-    
     if score > 90:
         return match
     return None
@@ -259,55 +236,3 @@ def get_ingredient_icon(user_input, category, size=256):
         return create_icons_no_url("Error finding image", size)
 
 
-def user_input_flow(user_input, textbox_id):
-    """
-    Generate the icon and save/upload it
-    """
-    query = user_input
-
-    if query.strip():
-        icon = get_ingredient_icon(query, category=None)
-
-        # Local path (optional)
-        filename = os.path.join(OUTPUT_FOLDER, f"ingredient_{textbox_id}.png")
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
-
-        if os.path.exists(filename):
-            os.remove(filename)
-
-        # Save locally
-        icon.save(filename)
-
-        # Upload to cloud storage if enabled
-        if storage.use_cloud:
-            from io import BytesIO
-            from improved_icon_utils import build_storage_key
-            buffer = BytesIO()
-            icon.save(buffer, format="PNG")
-            buffer.seek(0)
-            key = build_storage_key(query, None, icon_type='ingredient')
-            success = storage.upload_image(buffer, key)
-            if success:
-                print(f"[UPLOAD] Uploaded {key} to cloud storage")
-            else:
-                print(f"[UPLOAD ERROR] Failed to upload {key}")
-
-# === Main Usage ===
-
-def main():
-    """
-    Main entry point for generating ingredient icons based on user input.
-
-    Sets up argument parsing to receive the ingredient query and a unique ID for the query's textbox.
-    Then, it calls the user_input_flow function to process the user input and save the generated icon.
-    """
-    parser = argparse.ArgumentParser(description="Generate ingredient icons based on user input.")
-    parser.add_argument('user_input', type=str, help="The ingredient name or query.")
-    parser.add_argument('textbox_id', type=int, help="A unique ID for the textbox or query.")
-
-    args = parser.parse_args()
-
-    user_input_flow(args.user_input, args.textbox_id)
-
-if __name__ == "__main__":
-    main()

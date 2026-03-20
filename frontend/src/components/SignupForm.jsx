@@ -16,6 +16,7 @@ const SignupForm = ({ onSignup }) => {
       const response = await api.post('/api/users/', form);
       const { token, user } = response.data.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       onSignup(user);
     } catch (err) {
       setError(err.response?.data?.error || 'Signup failed');

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const ingredientNames = ["beans", "beef", "butter", "cheese", "chicken", "eggs", "fish", "flour", "garlic", "herbs", "milk", "oil", "onions", "pepper", "pork", "rice", "salt", "sugar", "tomatoes", "vinegar", "water"];
-const ingredientCategories = ["vegetable", "fruit", "meat", "dairy", "grain", "spice", "condiment", "frozen"];
-const ingredientUnits = ["g", "kg", "ml", "l", "cup", "tbsp", "tsp", "oz", "lb"];
+import { ingredientOptions as ingredientNames, categoryOptions as ingredientCategories, unitOptions as ingredientUnits } from '../constants';
 
 export default function EditIngredientModal({ isOpen, onClose, ingredient, onSave }) {
   const [form, setForm] = useState({

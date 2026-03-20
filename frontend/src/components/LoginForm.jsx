@@ -16,6 +16,7 @@ const LoginForm = ({ onLogin }) => {
       const response = await api.post('/api/auth/login/', form);
       const { token, user } = response.data.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       onLogin(user);
     } catch (err) {
       setError('Invalid username or password');

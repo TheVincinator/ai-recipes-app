@@ -1,4 +1,4 @@
-from flask import Flask, request, current_app, jsonify, send_from_directory, redirect
+from flask import Flask, request, current_app, jsonify, send_from_directory
 from db import db, User, Ingredient, Allergy, Recipe
 import requests
 import json

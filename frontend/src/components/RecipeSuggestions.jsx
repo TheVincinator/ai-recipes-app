@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import api from '../axios';
 
-const mealTypeOptions = ["breakfast", "lunch", "dinner", "snack"];
-const cuisineOptions = ["American", "Italian", "Mexican", "Chinese", "Indian", "French", "Japanese"];
-const dietOptions = ["vegetarian", "vegan", "gluten-free", "keto", "pescatarian"];
+import { mealTypeOptions, cuisineOptions, dietOptions } from '../constants';
 
 const RecipeSuggestions = ({ userId }) => {
   const [recipes, setRecipes] = useState("");

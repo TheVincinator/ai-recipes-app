@@ -15,34 +15,25 @@ def generate_and_upload_icon(app, name, category, icon_type='ingredient'):
     
     # Check if already exists
     if storage.exists(key):
-        print(f"[INFO] Icon already exists: {key}", flush=True)
         return True
-    
+
     with app.app_context():
         try:
-            # Import here to avoid circular imports
             from ingredient_icon_generator.main import get_ingredient_icon
-            
-            print(f"[DEBUG] Generating icon: {key}", flush=True)
-            
-            # Generate icon
+
             icon = get_ingredient_icon(name, category, size=256)
-            
-            # Convert PIL Image to bytes
+
             buffer = BytesIO()
             icon.save(buffer, format='PNG')
             buffer.seek(0)
-            
-            # Upload to storage
+
             success = storage.upload_image(buffer, key, content_type='image/png')
-            
-            if success:
-                print(f"[SUCCESS] Icon uploaded: {key}", flush=True)
-            else:
+
+            if not success:
                 print(f"[ERROR] Failed to upload icon: {key}", flush=True)
-            
+
             return success
-            
+
         except Exception as e:
             print(f"[ERROR] Failed to generate icon for {name}: {e}", flush=True)
             return False

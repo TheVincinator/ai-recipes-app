@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 
 const AccountSettings = ({ user, onLogout }) => {
   const [form, setForm] = useState({ username: user.username, email: user.email });
+  const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -51,6 +54,26 @@ const AccountSettings = ({ user, onLogout }) => {
     onLogout();
     // If onLogout does not redirect, uncomment next line:
     // navigate('/login');
+  };
+
+  const handlePasswordChange = async e => {
+    e.preventDefault();
+    setPasswordMessage('');
+    setPasswordError('');
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.put(`/api/users/${user.id}/`, { password: passwordForm.newPassword });
+      setPasswordMessage('Password updated successfully');
+      setPasswordForm({ newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      setPasswordError(err.response?.data?.error || err.message || 'Update failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -142,6 +165,55 @@ const AccountSettings = ({ user, onLogout }) => {
               </button>
             </div>
           </form>
+
+          <div className="border-t border-gray-200 mt-8 pt-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Change Password</h3>
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              <div>
+                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                <input
+                  id="newPassword"
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                  placeholder="New password"
+                  disabled={loading}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+                  placeholder="Confirm new password"
+                  disabled={loading}
+                  required
+                />
+              </div>
+              {passwordMessage && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-green-800 text-sm">{passwordMessage}</p>
+                </div>
+              )}
+              {passwordError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-red-800 text-sm">{passwordError}</p>
+                </div>
+              )}
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                disabled={loading}
+              >
+                {loading ? 'Updating...' : 'Change Password'}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const allergyCategories = ["food", "environmental", "medication"];
-const commonAllergies = ["peanuts", "tree nuts", "milk", "eggs", "wheat", "soy", "fish", "shellfish"];
+import { commonAllergies, allergyCategories } from '../constants';
 
 export default function EditAllergyModal({ isOpen, onClose, allergy, onSave }) {
   const [form, setForm] = useState({

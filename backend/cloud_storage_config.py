@@ -6,15 +6,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Configure your cloud storage provider
-# Example using AWS S3 (also works with DigitalOcean Spaces, Cloudflare R2, etc.)
-
 class CloudStorage:
     def __init__(self):
         self.use_cloud = os.getenv('USE_CLOUD_STORAGE', 'false').lower() == 'true'
-        
+
         if self.use_cloud:
-            self.s3_client = boto3.client(
+            self.client = boto3.client(
                 's3',
                 aws_access_key_id=os.getenv('R2_ACCESS_KEY_ID'),
                 aws_secret_access_key=os.getenv('R2_SECRET_ACCESS_KEY'),
@@ -22,7 +19,7 @@ class CloudStorage:
                 endpoint_url=os.getenv('R2_ENDPOINT_URL') or None
             )
             self.bucket_name = os.getenv('R2_BUCKET_NAME')
-            self.cdn_url = os.getenv('CDN_URL', '')  # Optional CDN in front of S3
+            self.cdn_url = os.getenv('CDN_URL', '')
         else:
             # Local storage fallback for development
             self.local_base_path = './ingredient_icon_generator/assets'
@@ -31,7 +28,7 @@ class CloudStorage:
         """Upload image to cloud storage or save locally"""
         if self.use_cloud:
             try:
-                self.s3_client.upload_fileobj(
+                self.client.upload_fileobj(
                     file_obj,
                     self.bucket_name,
                     key,
@@ -42,7 +39,7 @@ class CloudStorage:
                 )
                 return True
             except ClientError as e:
-                print(f"[ERROR] Failed to upload to S3: {e}", flush=True)
+                print(f"[ERROR] Failed to upload to R2: {e}", flush=True)
                 return False
         else:
             # Local storage
@@ -57,7 +54,7 @@ class CloudStorage:
         """Check if file exists in storage"""
         if self.use_cloud:
             try:
-                self.s3_client.head_object(Bucket=self.bucket_name, Key=key)
+                self.client.head_object(Bucket=self.bucket_name, Key=key)
                 return True
             except ClientError:
                 return False
@@ -68,10 +65,10 @@ class CloudStorage:
         """Delete file from storage"""
         if self.use_cloud:
             try:
-                self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
+                self.client.delete_object(Bucket=self.bucket_name, Key=key)
                 return True
             except ClientError as e:
-                print(f"[ERROR] Failed to delete from S3: {e}", flush=True)
+                print(f"[ERROR] Failed to delete from R2: {e}", flush=True)
                 return False
         else:
             local_path = os.path.join(self.local_base_path, key)
@@ -85,13 +82,8 @@ class CloudStorage:
         if self.use_cloud:
             if self.cdn_url:
                 return f"{self.cdn_url}/{key}"
-            elif os.getenv('R2_ENDPOINT_URL'):
-                # S3-compatible provider (e.g. Cloudflare R2) — CDN_URL must be set for public access
-                raise ValueError("CDN_URL must be set when using an S3-compatible provider like Cloudflare R2")
             else:
-                # AWS S3 URL
-                region = os.getenv('R2_REGION', 'auto')
-                return f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{key}"
+                raise ValueError("CDN_URL must be set when using Cloudflare R2")
         else:
             # Return local API endpoint
             return f"/api/assets/{key}"

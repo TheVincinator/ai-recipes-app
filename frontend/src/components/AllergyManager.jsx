@@ -3,8 +3,7 @@ import { useState, useEffect } from 'react';
 import EditAllergyModal from './EditAllergyModal';
 import AssetImage from './AssetImage';
 
-const allergyCategories = ["food", "environmental", "medication"];
-const commonAllergies = ["peanuts", "tree nuts", "milk", "eggs", "wheat", "soy", "fish", "shellfish"];
+import { commonAllergies, allergyCategories } from '../constants';
 
 export default function AllergyManager({ userId }) {
   const [allergies, setAllergies] = useState([]);
