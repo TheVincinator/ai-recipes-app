@@ -47,7 +47,16 @@ function SignupWrapper({ onSignup }) {
 }
 
 function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+  };
 
   return (
     <Router>
@@ -70,7 +79,7 @@ function App() {
             <Route path="/search" element={<IngredientSearch user={user} />} />
             <Route path="/allergies" element={<AllergyManager user={user} />} />
             <Route path="/recipes" element={<RecipeSuggestions user={user} />} />
-            <Route path="/profile" element={<AccountSettings user={user} onLogout={() => setUser(null)} />} />
+            <Route path="/profile" element={<AccountSettings user={user} onLogout={handleLogout} />} />
             <Route path="/saved" element={<SavedRecipes user={user} />} />
             <Route path="*" element={<Navigate to="/ingredients" />} />
           </Routes>

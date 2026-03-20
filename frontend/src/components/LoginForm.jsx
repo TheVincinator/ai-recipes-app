@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../axios';
 
 const LoginForm = ({ onLogin }) => {
   const [form, setForm] = useState({ username: '', password: '' });
@@ -13,9 +13,10 @@ const LoginForm = ({ onLogin }) => {
     e.preventDefault();
     setError('');
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/login/`, form);
+      const response = await api.post('/api/auth/login/', form);
       const { token, user } = response.data.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       onLogin(user);
     } catch (err) {
       setError('Invalid username or password');

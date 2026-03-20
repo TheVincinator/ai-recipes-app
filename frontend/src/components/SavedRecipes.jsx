@@ -10,6 +10,7 @@ const SavedRecipes = ({ user }) => {
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renameInput, setRenameInput] = useState("");
   const [recipeBeingRenamed, setRecipeBeingRenamed] = useState(null);
+  const [messageModal, setMessageModal] = useState({ show: false, message: '', success: true });
 
   useEffect(() => {
     async function fetchSavedRecipes() {
@@ -57,7 +58,7 @@ const SavedRecipes = ({ user }) => {
         throw new Error(result.error || "Failed to delete recipe.");
       }
     } catch (err) {
-      alert(`Error deleting recipe: ${err.message}`);
+      setMessageModal({ show: true, message: `Error deleting recipe: ${err.message}`, success: false });
       // On error, refetch recipes to sync UI
       try {
         const resp = await api.get(`/api/users/${userId}/saved-recipes/`);
@@ -114,7 +115,7 @@ const SavedRecipes = ({ user }) => {
 
           return (
             <article
-              key={recipe.id || recipe.name}
+              key={recipe.id}
               onClick={() => setSelectedRecipe(recipe)}
               tabIndex={0}
               role="button"
@@ -261,10 +262,10 @@ const SavedRecipes = ({ user }) => {
                     setShowRenameModal(false);
                     setRecipeBeingRenamed(null);
                   } else {
-                    alert("Failed to rename recipe.");
+                    setMessageModal({ show: true, message: "Failed to rename recipe.", success: false });
                   }
                 } catch {
-                  alert("Network error while renaming recipe.");
+                  setMessageModal({ show: true, message: "Network error while renaming recipe.", success: false });
                 }
               }}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
@@ -276,6 +277,22 @@ const SavedRecipes = ({ user }) => {
       )}
 
       {/* Animate fade-in styles */}
+      {messageModal.show && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg max-w-sm w-full text-center">
+            <p className={`text-lg font-medium mb-4 ${messageModal.success ? 'text-green-700' : 'text-red-700'}`}>
+              {messageModal.message}
+            </p>
+            <button
+              onClick={() => setMessageModal({ show: false, message: '', success: true })}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg transition duration-200"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         @keyframes fadeIn {
           from {

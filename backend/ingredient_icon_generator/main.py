@@ -5,22 +5,41 @@ import requests
 from io import BytesIO
 import os
 from fuzzywuzzy import process
-import argparse
 from dotenv import load_dotenv
+import torch
 
 load_dotenv()
 
 # Config
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_FILE = os.path.join(BASE_DIR, 'object_detection/yolov3-tinyu.pt')
+MODEL_FILE = 'object_detection/yolov8n.pt'
 CLASSES_FILE = os.path.join(BASE_DIR, 'object_detection/coco.names')
 OUTPUT_FOLDER = os.path.join(BASE_DIR, "assets/ingredients/generated_images")
 FONT_FILE = os.path.join(BASE_DIR, "fonts/Roboto-VariableFont_wdth,wght.ttf")
 
 PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY")
 
-# Load YOLO
-net = YOLO(MODEL_FILE)
+# ⭐ Add safe globals for PyTorch 2.6+
+try:
+    from ultralytics.nn.tasks import DetectionModel
+    torch.serialization.add_safe_globals([
+        DetectionModel,
+        torch.nn.modules.container.Sequential,
+        torch.nn.modules.conv.Conv2d,
+        torch.nn.modules.batchnorm.BatchNorm2d,
+        torch.nn.modules.activation.SiLU,
+        torch.nn.modules.pooling.MaxPool2d,
+        torch.nn.modules.upsampling.Upsample
+    ])
+except Exception as e:
+    print(f"[YOLO WARNING] Could not add safe globals: {e}", flush=True)
+
+# Load YOLO - safe globals registered above are sufficient for PyTorch 2.6+
+try:
+    net = YOLO(MODEL_FILE)
+except Exception as e:
+    print(f"[YOLO ERROR] Failed to load model: {e}", flush=True)
+    net = None
 
 # Load classes
 with open(CLASSES_FILE, 'r') as f:
@@ -55,28 +74,43 @@ def detect_objects_ultralytics(image_url, user_input):
     """
     Detect objects in the image that match the user_input, using Ultralytics YOLO.
     """
-    response = requests.get(image_url)
-    pil_image = Image.open(BytesIO(response.content)).convert("RGB")
-    img_np = np.array(pil_image)
+    if net is None:
+        print(f"[DETECT ERROR] YOLO model is None!", flush=True)
+        response = requests.get(image_url)
+        pil_image = Image.open(BytesIO(response.content)).convert("RGB")
+        return [], [], [], pil_image
 
-    results = net.predict(img_np, verbose=False)  # Ultralytics predicts on the image
-    boxes = []
-    confidences = []
-    class_ids = []
+    try:
+        response = requests.get(image_url)
+        pil_image = Image.open(BytesIO(response.content)).convert("RGB")
+        img_np = np.array(pil_image)
+        results = net.predict(img_np, verbose=False)
 
-    for r in results:  # results is a list of detections
-        for box in r.boxes:  # r.boxes contains the detected bounding boxes
-            cls_id = int(box.cls[0])
-            score = float(box.conf[0])
+        boxes = []
+        confidences = []
+        class_ids = []
 
-            # --- FILTER BY CONFIDENCE AND USER INPUT ---
-            if score > 0.5 and classes[cls_id].lower() == user_input.lower():
-                x1, y1, x2, y2 = box.xyxy[0].tolist()  # get bounding box
-                boxes.append([x1, y1, x2 - x1, y2 - y1])  # convert to [x, y, w, h]
-                confidences.append(score)
-                class_ids.append(cls_id)
+        for r in results:
+            for box in r.boxes:
+                cls_id = int(box.cls[0])
+                score = float(box.conf[0])
+                detected_class = classes[cls_id].lower() if cls_id < len(classes) else "unknown"
 
-    return boxes, confidences, class_ids, pil_image
+                similarity = process.extractOne(user_input.lower(), [detected_class])
+                fuzzy_score = similarity[1] if similarity else 0
+                if score > 0.5 and fuzzy_score >= 60:
+                    x1, y1, x2, y2 = box.xyxy[0].tolist()
+                    boxes.append([x1, y1, x2 - x1, y2 - y1])
+                    confidences.append(score)
+                    class_ids.append(cls_id)
+
+        return boxes, confidences, class_ids, pil_image
+
+    except Exception as e:
+        print(f"[DETECT ERROR] Exception: {type(e).__name__}: {e}", flush=True)
+        import traceback
+        print(traceback.format_exc(), flush=True)
+        raise
 
 
 def create_icons_no_url(text, size):
@@ -156,7 +190,14 @@ def find_best_match(user_input, options):
     """
     Finds the best matching word if the word differs slightly or if there was a typo.
     """
-    match, score = process.extractOne(user_input, options)
+    if not options:
+        return None
+
+    result = process.extractOne(user_input, options)
+    if result is None:
+        return None
+
+    match, score = result
     if score > 90:
         return match
     return None
@@ -195,38 +236,3 @@ def get_ingredient_icon(user_input, category, size=256):
         return create_icons_no_url("Error finding image", size)
 
 
-def user_input_flow(user_input, textbox_id):
-    """
-    Helper function for the main method that controls the user's arguments
-    """
-    query = user_input
-
-    if query.strip():
-        icon = get_ingredient_icon(query)
-
-        filename = os.path.join(OUTPUT_FOLDER, f"ingredient_{textbox_id}.png")
-
-        if os.path.exists(filename):
-            os.remove(filename)
-
-        icon.save(filename)
-
-# === Main Usage ===
-
-def main():
-    """
-    Main entry point for generating ingredient icons based on user input.
-
-    Sets up argument parsing to receive the ingredient query and a unique ID for the query's textbox.
-    Then, it calls the user_input_flow function to process the user input and save the generated icon.
-    """
-    parser = argparse.ArgumentParser(description="Generate ingredient icons based on user input.")
-    parser.add_argument('user_input', type=str, help="The ingredient name or query.")
-    parser.add_argument('textbox_id', type=int, help="A unique ID for the textbox or query.")
-
-    args = parser.parse_args()
-
-    user_input_flow(args.user_input, args.textbox_id)
-
-if __name__ == "__main__":
-    main()

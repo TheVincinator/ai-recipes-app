@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const allergyCategories = ["food", "environmental", "medication"];
-const commonAllergies = ["peanuts", "tree nuts", "milk", "eggs", "wheat", "soy", "fish", "shellfish"];
+import { commonAllergies, allergyCategories } from '../constants';
 
 export default function EditAllergyModal({ isOpen, onClose, allergy, onSave }) {
   const [form, setForm] = useState({
@@ -12,8 +11,8 @@ export default function EditAllergyModal({ isOpen, onClose, allergy, onSave }) {
   useEffect(() => {
     if (allergy) {
       setForm({
-        allergy_name: commonAllergies.includes(allergy.allergy_name) ? allergy.allergy_name : '',
-        allergy_category: allergyCategories.includes(allergy.allergy_category) ? allergy.allergy_category : '',
+        allergy_name: allergy.allergy_name || '',
+        allergy_category: allergy.allergy_category || '',
       });
     }
   }, [allergy]);
@@ -27,10 +26,6 @@ export default function EditAllergyModal({ isOpen, onClose, allergy, onSave }) {
       }));
     }
   }, [form.allergy_name]);
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -47,8 +42,8 @@ export default function EditAllergyModal({ isOpen, onClose, allergy, onSave }) {
   const handleCancel = () => {
     if (allergy) {
       setForm({
-        allergy_name: commonAllergies.includes(allergy.allergy_name) ? allergy.allergy_name : '',
-        allergy_category: allergyCategories.includes(allergy.allergy_category) ? allergy.allergy_category : '',
+        allergy_name: allergy.allergy_name || '',
+        allergy_category: allergy.allergy_category || '',
       });
     }
     onClose();

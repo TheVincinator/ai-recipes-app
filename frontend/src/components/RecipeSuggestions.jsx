@@ -1,9 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import api from '../axios';
 
-const mealTypeOptions = ["breakfast", "lunch", "dinner", "snack"];
-const cuisineOptions = ["American", "Italian", "Mexican", "Chinese", "Indian", "French", "Japanese"];
-const dietOptions = ["vegetarian", "vegan", "gluten-free", "keto", "pescatarian"];
+import { mealTypeOptions, cuisineOptions, dietOptions } from '../constants';
 
 const RecipeSuggestions = ({ userId }) => {
   const [recipes, setRecipes] = useState("");
@@ -17,6 +15,12 @@ const RecipeSuggestions = ({ userId }) => {
   const [recipeName, setRecipeName] = useState("");
   const [messageModal, setMessageModal] = useState({ show: false, message: "", success: true });
   const recipeRef = useRef(null);
+
+  useEffect(() => {
+    if (recipes && recipeRef.current) {
+      recipeRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [recipes]);
 
   const fetchRecipes = async () => {
     setLoading(true);
@@ -33,13 +37,6 @@ const RecipeSuggestions = ({ userId }) => {
 
       if (result.success) {
         setRecipes(result.data.recipes || "");
-
-        // Wait for the recipe to be rendered before scrolling
-        setTimeout(() => {
-          if (recipeRef.current) {
-            recipeRef.current.scrollIntoView({ behavior: "smooth" });
-          }
-        }, 100); // small delay to ensure render
       } else {
         setError(result.error || "Failed to get recipes.");
         setRecipes("");
