@@ -1,5 +1,5 @@
 import api from '../axios';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AllergyManager from './AllergyManager';
 import EditIngredientModal from './EditIngredientModal';
 import RecipeSuggestions from './RecipeSuggestions';
@@ -35,9 +35,22 @@ export default function IngredientManager({ user }) {
     return () => clearTimeout(handler);
   }, [categoryFilter]);
 
+  const fetchIngredients = useCallback(async () => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (searchDebounced) queryParams.append('q', searchDebounced);
+      if (categoryFilterDebounced) queryParams.append('category', categoryFilterDebounced);
+
+      const res = await api.get(`/api/users/${user.id}/ingredients/search/?${queryParams}`);
+      setIngredients(res.data.data);
+    } catch (error) {
+      console.error('Error fetching ingredients:', error);
+    }
+  }, [searchDebounced, categoryFilterDebounced, user.id]);
+
   useEffect(() => {
     fetchIngredients();
-  }, [searchDebounced, categoryFilterDebounced, fetchIngredients]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchIngredients]);
 
   useEffect(() => {
     // If name is cleared, also clear quantity, unit, and category
@@ -50,7 +63,7 @@ export default function IngredientManager({ user }) {
       }));
     }
   }, [form.name]);
-  
+
   useEffect(() => {
     // If quantity is cleared or invalid, also clear unit
     if (form.quantity === '' || isNaN(Number(form.quantity))) {
@@ -59,20 +72,7 @@ export default function IngredientManager({ user }) {
         unit: '',
       }));
     }
-  }, [form.quantity]);  
-
-  const fetchIngredients = async () => {
-    try {
-      const queryParams = new URLSearchParams();
-      if (searchDebounced) queryParams.append('q', searchDebounced);
-      if (categoryFilterDebounced) queryParams.append('category', categoryFilterDebounced);
-
-      const res = await api.get(`/api/users/${user.id}/ingredients/search/?${queryParams}`);
-      setIngredients(res.data.data);
-    } catch (error) {
-      console.error('Error fetching ingredients:', error);
-    }
-  };
+  }, [form.quantity]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
