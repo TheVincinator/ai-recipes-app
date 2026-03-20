@@ -27,10 +27,6 @@ export default function EditAllergyModal({ isOpen, onClose, allergy, onSave }) {
     }
   }, [form.allergy_name]);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
   const handleSave = (e) => {
     e.preventDefault();
 

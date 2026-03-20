@@ -37,7 +37,7 @@ export default function IngredientManager({ user }) {
 
   useEffect(() => {
     fetchIngredients();
-  }, [searchDebounced, categoryFilterDebounced]);
+  }, [searchDebounced, categoryFilterDebounced, fetchIngredients]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // If name is cleared, also clear quantity, unit, and category
