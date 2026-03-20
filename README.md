@@ -26,7 +26,7 @@ Based on your ingredients and preferences, use AI to generate recipes and cook d
 
 ## Features
 
-- **User accounts** — register, log in, update profile, delete account
+- **User accounts** — register, log in, update profile, change password, delete account
 - **Ingredient manager** — add ingredients with quantities, units, and categories; search and filter your pantry
 - **Allergy manager** — track dietary restrictions with custom or preset allergens
 - **AI recipe suggestions** — get recipes tailored to your pantry, filtered by meal type, cuisine, and diet; allergens are automatically excluded
