@@ -16,12 +16,12 @@ class CloudStorage:
         if self.use_cloud:
             self.s3_client = boto3.client(
                 's3',
-                aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-                aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-                region_name=os.getenv('AWS_REGION', 'us-east-1'),
-                endpoint_url=os.getenv('S3_ENDPOINT_URL') or None # For S3-compatible services
+                aws_access_key_id=os.getenv('R2_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.getenv('R2_SECRET_ACCESS_KEY'),
+                region_name=os.getenv('R2_REGION', 'auto'),
+                endpoint_url=os.getenv('R2_ENDPOINT_URL') or None
             )
-            self.bucket_name = os.getenv('S3_BUCKET_NAME')
+            self.bucket_name = os.getenv('R2_BUCKET_NAME')
             self.cdn_url = os.getenv('CDN_URL', '')  # Optional CDN in front of S3
         else:
             # Local storage fallback for development
@@ -85,9 +85,12 @@ class CloudStorage:
         if self.use_cloud:
             if self.cdn_url:
                 return f"{self.cdn_url}/{key}"
+            elif os.getenv('R2_ENDPOINT_URL'):
+                # S3-compatible provider (e.g. Cloudflare R2) — CDN_URL must be set for public access
+                raise ValueError("CDN_URL must be set when using an S3-compatible provider like Cloudflare R2")
             else:
-                # Generate S3 URL
-                region = os.getenv('AWS_REGION', 'us-east-1')
+                # AWS S3 URL
+                region = os.getenv('R2_REGION', 'auto')
                 return f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{key}"
         else:
             # Return local API endpoint
