@@ -6,12 +6,10 @@ __pycache__/
 .Python
 venv/
 env/
-ENV/
 .venv
 
 # Flask
 instance/
-.webassets-cache
 
 # Database
 *.db
@@ -20,8 +18,6 @@ instance/
 
 # Environment variables
 .env
-.env.local
-.env.production
 
 # IDE
 .vscode/
@@ -36,10 +32,6 @@ Thumbs.db
 
 # Local icon cache (generated at runtime, not committed)
 ingredient_icon_generator/
-
-# AWS
-*.pem
-.elasticbeanstalk/
 
 # Logs
 *.log
