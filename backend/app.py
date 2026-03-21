@@ -475,7 +475,7 @@ def get_ingredient_generated_image_by_name(combined):
         url = storage.get_url(key)
         r = requests.get(url)
         if r.status_code == 200:
-            return r.content, 200, {'Content-Type': 'image/png', 'Cache-Control': 'max-age=31536000'}
+            return r.content, 200, {'Content-Type': 'image/png', 'Cache-Control': 'max-age=3600'}
         return '', 404
     else:
         # Serve locally (development)
@@ -509,7 +509,7 @@ def get_allergy_generated_image_by_name(combined):
         url = storage.get_url(key)
         r = requests.get(url)
         if r.status_code == 200:
-            return r.content, 200, {'Content-Type': 'image/png', 'Cache-Control': 'max-age=31536000'}
+            return r.content, 200, {'Content-Type': 'image/png', 'Cache-Control': 'max-age=3600'}
         return '', 404
     else:
         filename = f"{combined}.png"

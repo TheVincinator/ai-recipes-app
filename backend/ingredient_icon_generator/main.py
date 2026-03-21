@@ -233,6 +233,7 @@ def get_ingredient_icon(user_input, category, size=256):
             return fetch_or_create_icon(user_input, category, size)
 
     except Exception as e:
-        return create_icons_no_url("Error finding image", size)
+        print(f"[ERROR] Icon generation failed for '{user_input}': {type(e).__name__}: {e}", flush=True)
+        raise
 
 
