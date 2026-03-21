@@ -3,3 +3,4 @@ venv/
 instance/
 backend/.env
 backend/object_detection/
+.idea/
