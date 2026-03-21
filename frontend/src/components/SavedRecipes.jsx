@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from '../axios';
+import ReactMarkdown from 'react-markdown';
 
 const SavedRecipes = ({ user }) => {
   const [recipes, setRecipes] = useState([]);
@@ -110,8 +111,9 @@ const SavedRecipes = ({ user }) => {
             (typeof recipe === "string"
               ? recipe
               : recipe.recipe || "No preview available.") || "";
+          const plainPreview = preview.replace(/#{1,6}\s*/g, '').replace(/\*\*/g, '').replace(/---/g, '').trim();
           const previewSnippet =
-            preview.length > 120 ? preview.slice(0, 120) + "..." : preview;
+            plainPreview.length > 120 ? plainPreview.slice(0, 120) + "..." : plainPreview;
 
           return (
             <article
@@ -189,11 +191,13 @@ const SavedRecipes = ({ user }) => {
           <h2 className="text-3xl font-bold mb-4 text-gray-900 animate-fadeInUp">
             {selectedRecipe.name || "Recipe Preview"}
           </h2>
-          <pre className="max-h-96 overflow-auto whitespace-pre-wrap bg-gray-50 p-6 rounded-lg border border-gray-300 text-gray-800 animate-fadeIn">
-            {typeof selectedRecipe === "string"
-              ? selectedRecipe
-              : selectedRecipe.recipe || "No recipe text available."}
-          </pre>
+          <div className="max-h-96 overflow-auto bg-gray-50 p-6 rounded-lg border border-gray-300 text-gray-800 animate-fadeIn prose max-w-none">
+            <ReactMarkdown>
+              {typeof selectedRecipe === "string"
+                ? selectedRecipe
+                : selectedRecipe.recipe || "No recipe text available."}
+            </ReactMarkdown>
+          </div>
           <div className="mt-6 flex justify-end space-x-4">
             <button
               onClick={() =>

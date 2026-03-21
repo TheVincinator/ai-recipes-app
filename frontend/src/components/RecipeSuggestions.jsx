@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import api from '../axios';
+import ReactMarkdown from 'react-markdown';
 
 import { mealTypeOptions, cuisineOptions, dietOptions } from '../constants';
 
@@ -134,7 +135,7 @@ const RecipeSuggestions = ({ userId }) => {
               className="bg-gray-50 rounded-lg p-6 whitespace-pre-wrap"
             >
               <h3 className="text-lg font-semibold text-gray-900 mb-4">🍽️ Suggested Recipes:</h3>
-              <div className="text-gray-700 mb-4">{recipes}</div>
+              <div className="text-gray-700 mb-4 prose max-w-none"><ReactMarkdown>{recipes}</ReactMarkdown></div>
               <button
                 onClick={() => {
                   setRecipeToSave(recipes);
