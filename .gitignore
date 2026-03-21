@@ -1,4 +1,5 @@
 .venv/
 venv/
 instance/
-Backend/.env
+backend/.env
+backend/object_detection/

@@ -5,6 +5,7 @@ import EditIngredientModal from './EditIngredientModal';
 import RecipeSuggestions from './RecipeSuggestions';
 import CreatableSelect from 'react-select/creatable';
 import AssetImage from './AssetImage';
+import ScanImageModal from './ScanImageModal';
 
 import { ingredientOptions, categoryOptions, unitOptions } from '../constants';
 
@@ -18,6 +19,20 @@ export default function IngredientManager({ user }) {
   const [categoryFilterDebounced, setCategoryFilterDebounced] = useState('');
   const [editingIngredient, setEditingIngredient] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showScanModal, setShowScanModal] = useState(false);
+  const [scanDuplicateMsg, setScanDuplicateMsg] = useState('');
+  const [scannedIds, setScannedIds] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`scanned_ingredient_ids_${user.id}`);
+      return new Set(stored ? JSON.parse(stored) : []);
+    } catch {
+      return new Set();
+    }
+  });
+
+  const saveScannedIds = (ids) => {
+    localStorage.setItem(`scanned_ingredient_ids_${user.id}`, JSON.stringify([...ids]));
+  };
 
   // Debounce search input
   useEffect(() => {
@@ -44,7 +59,7 @@ export default function IngredientManager({ user }) {
       const res = await api.get(`/api/users/${user.id}/ingredients/search/?${queryParams}`);
       setIngredients(res.data.data);
     } catch (error) {
-      console.error('Error fetching ingredients:', error);
+      setFormError('Failed to load ingredients.');
     }
   }, [searchDebounced, categoryFilterDebounced, user.id]);
 
@@ -117,11 +132,10 @@ export default function IngredientManager({ user }) {
           setForm({ name: '', quantity: '', unit: '', category: '' });
           setFormError('');
         } else {
-          setFormError("Failed to add ingredient: " + (data.message || "Unknown error"));
+          setFormError("Failed to add ingredient: " + (data.error || "Unknown error"));
         }
       })
-      .catch((error) => {
-        console.error('Add ingredient failed:', error);
+      .catch(() => {
         setFormError("Failed to add ingredient.");
       });
   };
@@ -139,25 +153,98 @@ export default function IngredientManager({ user }) {
         setIngredients((prev) =>
           prev.map((ing) => (ing.id === updatedIngredient.id ? updatedIngredient : ing))
         );
+        // If name or category changed, remove the scan badge for the old name
+        if (editingIngredient) {
+          setScannedIds(prev => {
+            const next = new Set(prev);
+            next.delete(editingIngredient.id);
+            saveScannedIds(next);
+            return next;
+          });
+        }
       }
-    } catch (error) {
-      console.error("Error updating ingredient:", error);
+    } catch {
+      setFormError("Failed to update ingredient.");
     }
   };
 
   const removeIngredient = async (id) => {
     if (!window.confirm("Are you sure you want to delete this ingredient?")) return;
     try {
+      const ing = ingredients.find(i => i.id === id);
       await api.delete(`/api/users/${user.id}/ingredients/${id}/`);
-      setIngredients((prev) => prev.filter(ing => ing.id !== id));
-    } catch (error) {
-      console.error('Error deleting ingredient:', error);
+      setIngredients((prev) => prev.filter(i => i.id !== id));
+      if (ing) {
+        setScannedIds(prev => {
+          const next = new Set(prev);
+          next.delete(ing.id);
+          saveScannedIds(next);
+          return next;
+        });
+      }
+    } catch {
+      setFormError("Failed to delete ingredient.");
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     addIngredient();
+  };
+
+  const handleScanConfirmed = async (items) => {
+    const newItems = items.filter(
+      item => !ingredients.some(i =>
+        i.name.toLowerCase() === item.name.toLowerCase() &&
+        (i.category?.toLowerCase() || '') === (item.category?.toLowerCase() || '')
+      )
+    );
+    const duplicateCount = items.length - newItems.length;
+
+    // Only upload icons for new items so existing icons are not overwritten
+    await Promise.all(newItems.map(item =>
+      item.croppedImage
+        ? api.post(`/api/assets/ingredients/upload-icon/`, {
+            image: item.croppedImage,
+            name: item.name,
+            category: item.category || '',
+          }).catch(() => {})
+        : Promise.resolve()
+    ));
+
+    const addedIds = [];
+    for (const item of newItems) {
+      try {
+        const res = await api.post(`/api/users/${user.id}/ingredients/`, {
+          name: item.name,
+          category: item.category || '',
+          quantity: item.quantity ? parseFloat(item.quantity) : null,
+          unit: item.unit || '',
+          skip_icon: true,
+        });
+        if (res.data.success) {
+          setIngredients((prev) => [...prev, res.data.data]);
+          addedIds.push(res.data.data.id);
+        }
+      } catch {
+        // skip failed items silently
+      }
+    }
+
+    if (addedIds.length > 0) {
+      setScannedIds(prev => {
+        const next = new Set(prev);
+        addedIds.forEach(id => next.add(id));
+        saveScannedIds(next);
+        return next;
+      });
+    }
+
+    if (duplicateCount > 0) {
+      setScanDuplicateMsg(
+        `${duplicateCount} item${duplicateCount !== 1 ? 's were' : ' was'} already in your list and ${duplicateCount !== 1 ? 'were' : 'was'} skipped.`
+      );
+    }
   };
 
   const categorySelectOptions = categoryOptions.map((cat) => ({
@@ -171,7 +258,13 @@ export default function IngredientManager({ user }) {
         <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-8 mb-12">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">🧾 Manage Ingredients</h2>
-            <p className="text-gray-600">Add and organize your ingredients</p>
+            <p className="text-gray-600 mb-4">Add and organize your ingredients</p>
+            <button
+              onClick={() => setShowScanModal(true)}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            >
+              📷 Scan Food Items
+            </button>
           </div>
 
           {/* Search + Filter */}
@@ -312,6 +405,12 @@ export default function IngredientManager({ user }) {
           {/* Ingredient List */}
           <div className="space-y-3">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Ingredients</h3>
+            {scanDuplicateMsg && (
+              <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mb-3">
+                <p className="text-amber-800 text-sm">ℹ️ {scanDuplicateMsg}</p>
+                <button onClick={() => setScanDuplicateMsg('')} className="text-amber-400 hover:text-amber-600 ml-3 text-lg leading-none">✕</button>
+              </div>
+            )}
             {ingredients.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No ingredients yet. Add some above!</p>
             ) : (
@@ -319,24 +418,17 @@ export default function IngredientManager({ user }) {
                 {ingredients.map((ingredient) => (
                   <li key={ingredient.id} className="bg-gray-50 rounded-lg p-4 flex justify-between items-center hover:bg-gray-100 transition duration-200">
                     <div className="flex items-center gap-3">
-                    {ingredientOptions.map(name => name.toLowerCase()).includes(ingredient.name.toLowerCase()) ? (
-                      <img
-                        src={`${process.env.REACT_APP_API_URL}/api/assets/ingredients/default_images/${ingredient.name.toLowerCase()}`}
-                        alt={ingredient.name}
-                        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = `${process.env.REACT_APP_API_URL}/api/assets/ingredients/default_images/placeholder`;
-                        }}
-                      />
-                    ) : (
-                      <AssetImage
-                        assetType="ingredients"
-                        maxAttempts={20}
-                        name={ingredient.name}
-                        category={ingredient.category}
-                      />
-                    )}
+                      <div className="relative">
+                        <AssetImage
+                          assetType="ingredients"
+                          name={ingredient.name}
+                          category={ingredient.category}
+                          userId={user.id}
+                        />
+                        {scannedIds.has(ingredient.id) && (
+                          <span className="absolute -bottom-1 -right-1 bg-purple-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center" title="Added via scan">📷</span>
+                        )}
+                      </div>
                       <div>
                         <span className="font-medium text-gray-900">{ingredient.name}</span>
                         {ingredient.quantity != null && (
@@ -380,9 +472,18 @@ export default function IngredientManager({ user }) {
 
       {/* Allergy Manager */}
       <AllergyManager userId={user.id} />
-      
+
       {/* Recipe Suggestions */}
-      <RecipeSuggestions userId={user.id} />
+      <RecipeSuggestions user={user} />
+
+      {showScanModal && (
+        <ScanImageModal
+          userId={user.id}
+          scanType="ingredients"
+          onItemsConfirmed={handleScanConfirmed}
+          onClose={() => setShowScanModal(false)}
+        />
+      )}
 
     </div>
   );

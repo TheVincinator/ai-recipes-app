@@ -1,32 +1,45 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
-export default function AssetImage({ name, category, assetType, maxAttempts = 10 }) {
-  const [attempts, setAttempts] = useState(0);
+export default function AssetImage({ name, category, assetType, userId }) {
   const [loaded, setLoaded] = useState(false);
-  const timerRef = useRef(null);
+  const [userSpecificFailed, setUserSpecificFailed] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    setAttempts(0);
     setLoaded(false);
-    return () => clearTimeout(timerRef.current);
-  }, [name, category]);
+    setUserSpecificFailed(false);
+    setFailed(false);
+  }, [name, category, userId]);
 
   const formattedName = category?.trim()
     ? `${name.trim().toLowerCase()}_${category.trim().toLowerCase()}`
     : name.trim().toLowerCase();
 
-  const src = `${process.env.REACT_APP_API_URL}/api/assets/${assetType}/generated_images/${formattedName}?t=${attempts}`;
-  const placeholder = `${process.env.REACT_APP_API_URL}/api/assets/${assetType}/default_images/placeholder`;
+  const base = `${process.env.REACT_APP_API_URL || ''}/api/assets/${assetType}/generated_images`;
+
+  const src = userId && !userSpecificFailed
+    ? `${base}/${userId}_${formattedName}`
+    : `${base}/${formattedName}`;
 
   const handleError = () => {
-    if (attempts < maxAttempts) {
-      timerRef.current = setTimeout(() => setAttempts(a => a + 1), 1000);
+    if (userId && !userSpecificFailed) {
+      setUserSpecificFailed(true);
+    } else {
+      setFailed(true);
     }
   };
 
+  if (failed) {
+    return (
+      <div className="w-10 h-10 rounded-full bg-gray-200 border-2 border-white shadow-sm flex items-center justify-center text-gray-400 text-lg">
+        🍽️
+      </div>
+    );
+  }
+
   return (
     <div className="w-10 h-10">
-      {!loaded && attempts < maxAttempts && (
+      {!loaded && (
         <div className="w-8 h-8 flex items-center justify-center">
           <div className="flex space-x-1">
             <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
@@ -36,9 +49,9 @@ export default function AssetImage({ name, category, assetType, maxAttempts = 10
         </div>
       )}
       <img
-        src={attempts >= maxAttempts ? placeholder : src}
+        src={src}
         alt={name}
-        style={{ display: loaded || attempts >= maxAttempts ? 'block' : 'none' }}
+        style={{ display: loaded ? 'block' : 'none' }}
         className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
         onLoad={() => setLoaded(true)}
         onError={handleError}

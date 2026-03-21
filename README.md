@@ -31,7 +31,8 @@ Based on your ingredients and preferences, use AI to generate recipes and cook d
 - **Allergy manager** — track dietary restrictions with custom or preset allergens
 - **AI recipe suggestions** — get recipes tailored to your pantry, filtered by meal type, cuisine, and diet; allergens are automatically excluded
 - **Saved recipes** — bookmark, rename, and delete recipes
-- **Auto-generated icons** — YOLOv8n object detection fetches and crops food images into icons for custom ingredients and allergies
+- **Auto-generated icons** — Claude AI generates SVG icons for ingredients and allergies in the background
+- **Image scanning** — upload a photo and Claude Vision identifies ingredients or allergens with bounding boxes; select items to add them directly to your list
 
 ---
 
@@ -42,8 +43,8 @@ Based on your ingredients and preferences, use AI to generate recipes and cook d
 | Frontend | React 19, React Router, Axios, Tailwind CSS |
 | Backend | Flask 3, SQLAlchemy, Flask-Migrate, PyJWT |
 | Database | PostgreSQL (production) / SQLite (development) |
-| AI — Recipes | DeepSeek V3 via Hugging Face API |
-| AI — Icons | YOLOv8n (Ultralytics) + Pixabay API |
+| AI — Recipes | Claude (claude-haiku-4-5) via Anthropic SDK |
+| AI — Icons & Vision | Claude (claude-haiku-4-5 / claude-opus-4-6) via Anthropic SDK |
 | Storage | Cloudflare R2 (S3-compatible) |
 | Deployment | Render (backend), Vercel (frontend) |
 
@@ -55,8 +56,7 @@ Based on your ingredients and preferences, use AI to generate recipes and cook d
 
 - Python 3.10+
 - Node.js 18+
-- A [Hugging Face](https://huggingface.co) API key
-- A [Pixabay](https://pixabay.com/service/about/api/) API key
+- An [Anthropic](https://console.anthropic.com/) API key
 - A Cloudflare R2 bucket (or set `USE_CLOUD_STORAGE=false` to store icons locally)
 
 ### Backend
@@ -75,12 +75,8 @@ ENV=development
 DATABASE_URL=sqlite:///site.db
 JWT_SECRET_KEY=your_secret_key_here
 
-# AI recipe generation
-AI_API_KEY=your_huggingface_api_key
-AI_API_URL=https://router.huggingface.co/novita/v3/openai/chat/completions
-
-# Icon generation
-PIXABAY_API_KEY=your_pixabay_api_key
+# Anthropic Claude API (required for recipe generation, icon generation, and image scanning)
+ANTHROPIC_API_KEY=your_anthropic_api_key
 
 # Cloud storage — set to false to store icons locally during development
 USE_CLOUD_STORAGE=false
@@ -130,9 +126,7 @@ npm start
 | `ENV` | Set to `production` in prod — skips loading `.env` file |
 | `DATABASE_URL` | PostgreSQL URL in production; `sqlite:///site.db` in development |
 | `JWT_SECRET_KEY` | Secret for signing JWT tokens — use a long random string in production |
-| `AI_API_KEY` | Hugging Face API token for recipe generation |
-| `AI_API_URL` | Hugging Face inference endpoint URL |
-| `PIXABAY_API_KEY` | API key for fetching food images used in icon generation |
+| `ANTHROPIC_API_KEY` | Anthropic API key for recipe generation, icon generation, and image scanning |
 | `USE_CLOUD_STORAGE` | `true` to store icons in R2, `false` to store locally |
 | `R2_ACCESS_KEY_ID` | Cloudflare R2 access key ID |
 | `R2_SECRET_ACCESS_KEY` | Cloudflare R2 secret access key |
@@ -162,22 +156,30 @@ npm start
 | GET | `/api/users/<id>/ingredients/search/` | Search ingredients (`?q=&category=`) |
 | GET / POST | `/api/users/<id>/allergies/` | List or add allergies |
 | PUT / DELETE | `/api/users/<id>/allergies/<id>/` | Update or delete allergy |
-| POST | `/api/users/<id>/recipe-suggestions/` | Get AI recipe suggestions |
+| POST | `/api/users/<id>/recipe-suggestions/` | Get AI recipe suggestions (`?meal_type=&cuisine=&diet=`) |
 | GET / POST | `/api/users/<id>/saved-recipes/` | List or save recipes |
 | PUT / DELETE | `/api/users/<id>/saved-recipes/<id>` | Rename or delete saved recipe |
+| POST | `/api/users/<id>/scan-image/` | Scan image with Claude Vision for ingredients/allergens |
 | GET | `/health` | Health check |
 
 ---
 
 ## Icon Generation
 
-When a custom ingredient or allergy is added, the app generates an icon in the background:
+When a custom ingredient or allergy is added, the app generates an SVG icon in the background using Claude:
 
-1. Pixabay is searched for a food image matching the name and category
-2. YOLOv8n detects and crops the most relevant food object in the image
-3. The crop is resized to 256×256px
-4. The icon is uploaded to Cloudflare R2 (or saved locally if `USE_CLOUD_STORAGE=false`)
-5. The frontend polls every second until the icon is ready, then displays it — falling back to a placeholder after 10 failed attempts
+1. Claude (claude-haiku-4-5) generates a minimal SVG icon based on the item name and category
+2. The SVG is uploaded to Cloudflare R2 (or saved locally if `USE_CLOUD_STORAGE=false`)
+3. The frontend polls every second until the icon is ready, then displays it — falling back to a placeholder after 10 failed attempts
+4. Icons are shared across users; when no users reference an ingredient or allergy anymore, its icon is deleted
+
+## Image Scanning
+
+Upload a photo to detect ingredients or allergens using Claude Vision:
+
+1. The image is sent to Claude (claude-opus-4-6) which returns JSON with item names, categories, and bounding boxes (as % coordinates)
+2. Detected items are overlaid on the image; click any item to select it
+3. Selected items can be saved directly as ingredients or allergens
 
 ---
 

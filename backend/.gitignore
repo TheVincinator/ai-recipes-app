@@ -34,13 +34,8 @@ instance/
 .DS_Store
 Thumbs.db
 
-# Generated images (don't commit these)
-ingredient_icon_generator/assets/ingredients/generated_images/*
-ingredient_icon_generator/assets/allergies/generated_images/*
-
-# Keep placeholder images
-!ingredient_icon_generator/assets/ingredients/generated_images/.gitkeep
-!ingredient_icon_generator/assets/allergies/generated_images/.gitkeep
+# Local icon cache (generated at runtime, not committed)
+ingredient_icon_generator/
 
 # AWS
 *.pem

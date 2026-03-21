@@ -2,6 +2,7 @@ import api from '../axios';
 import { useState, useEffect } from 'react';
 import EditAllergyModal from './EditAllergyModal';
 import AssetImage from './AssetImage';
+import ScanImageModal from './ScanImageModal';
 
 import { commonAllergies, allergyCategories } from '../constants';
 
@@ -12,6 +13,20 @@ export default function AllergyManager({ userId }) {
   const [formDebounced, setFormDebounced] = useState(form);
   const [editingAllergy, setEditingAllergy] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showScanModal, setShowScanModal] = useState(false);
+  const [scanDuplicateMsg, setScanDuplicateMsg] = useState('');
+  const [scannedIds, setScannedIds] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`scanned_allergy_ids_${userId}`);
+      return new Set(stored ? JSON.parse(stored) : []);
+    } catch {
+      return new Set();
+    }
+  });
+
+  const saveScannedIds = (ids) => {
+    localStorage.setItem(`scanned_allergy_ids_${userId}`, JSON.stringify([...ids]));
+  };
 
   // Debounce form inputs for 300ms
   useEffect(() => {
@@ -29,6 +44,10 @@ export default function AllergyManager({ userId }) {
         if (data.success) {
           setAllergies(data.data);
         }
+      })
+      .catch((error) => {
+        console.error('Error fetching allergies:', error);
+        setFormError('Failed to load allergies.');
       });
   }, [userId]);
 
@@ -55,7 +74,7 @@ export default function AllergyManager({ userId }) {
     const exists = allergies.some(
       (a) =>
         a.allergy_name.toLowerCase() === allergyName.toLowerCase() &&
-        a.allergy_category.toLowerCase() === allergyCategory.toLowerCase()
+        (a.allergy_category || '').toLowerCase() === allergyCategory.toLowerCase()
     );
   
     if (exists) {
@@ -94,7 +113,17 @@ export default function AllergyManager({ userId }) {
     setAllergies((prev) =>
       prev.map((a) => (a.id === updatedAllergy.id ? updatedAllergy : a))
     );
-  
+
+    // If name or category changed, remove the scan badge
+    if (editingAllergy) {
+      setScannedIds(prev => {
+        const next = new Set(prev);
+        next.delete(editingAllergy.id);
+        saveScannedIds(next);
+        return next;
+      });
+    }
+
     // Optionally send PATCH to backend to persist changes
     api.put(`/api/users/${userId}/allergies/${updatedAllergy.id}/`, {
       allergy_name: updatedAllergy.allergy_name,
@@ -116,8 +145,17 @@ export default function AllergyManager({ userId }) {
   const deleteAllergy = async (id) => {
     if (!window.confirm("Are you sure you want to delete this allergy?")) return;
     try {
+      const allergy = allergies.find(a => a.id === id);
       await api.delete(`/api/users/${userId}/allergies/${id}/`);
-      setAllergies((prev) => prev.filter(ing => ing.id !== id));
+      setAllergies((prev) => prev.filter(a => a.id !== id));
+      if (allergy) {
+        setScannedIds(prev => {
+          const next = new Set(prev);
+          next.delete(allergy.id);
+          saveScannedIds(next);
+          return next;
+        });
+      }
     } catch (error) {
       console.error('Error deleting allergy:', error);
     }
@@ -128,13 +166,72 @@ export default function AllergyManager({ userId }) {
     addAllergy();
   };
 
+  const handleScanConfirmed = async (items) => {
+    const newItems = items.filter(
+      item => !allergies.some(a =>
+        a.allergy_name.toLowerCase() === item.name.toLowerCase() &&
+        (a.allergy_category?.toLowerCase() || '') === (item.category?.toLowerCase() || '')
+      )
+    );
+    const duplicateCount = items.length - newItems.length;
+
+    // Only upload icons for new items so existing icons are not overwritten
+    await Promise.all(newItems.map(item =>
+      item.croppedImage
+        ? api.post(`/api/assets/allergies/upload-icon/`, {
+            image: item.croppedImage,
+            name: item.name,
+            category: item.category || '',
+          }).catch(() => {})
+        : Promise.resolve()
+    ));
+
+    const addedIds = [];
+    for (const item of newItems) {
+      try {
+        const res = await api.post(`/api/users/${userId}/allergies/`, {
+          allergy_name: item.name,
+          allergy_category: item.category || '',
+          skip_icon: true,
+        });
+        if (res.data.success) {
+          setAllergies((prev) => [...prev, res.data.data]);
+          addedIds.push(res.data.data.id);
+        }
+      } catch {
+        // skip failed items silently
+      }
+    }
+
+    if (addedIds.length > 0) {
+      setScannedIds(prev => {
+        const next = new Set(prev);
+        addedIds.forEach(id => next.add(id));
+        saveScannedIds(next);
+        return next;
+      });
+    }
+
+    if (duplicateCount > 0) {
+      setScanDuplicateMsg(
+        `${duplicateCount} allergen${duplicateCount !== 1 ? 's were' : ' was'} already in your list and ${duplicateCount !== 1 ? 'were' : 'was'} skipped.`
+      );
+    }
+  };
+
 
   return (
     <div className="max-w-2xl mx-auto mb-12">
       <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-8">
         <div className="text-center mb-8">
           <h3 className="text-3xl font-bold text-gray-900 mb-2">Manage Allergies</h3>
-          <p className="text-gray-600">Add your allergies for safer recipe suggestions</p>
+          <p className="text-gray-600 mb-4">Add your allergies for safer recipe suggestions</p>
+          <button
+            onClick={() => setShowScanModal(true)}
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+          >
+            📷 Scan for Allergens
+          </button>
         </div>
 
         {/* Allergy form */}
@@ -195,6 +292,12 @@ export default function AllergyManager({ userId }) {
         {/* Allergy list */}
         <div className="space-y-3">
           <h4 className="text-lg font-semibold text-gray-900 mb-4">Your Allergies</h4>
+            {scanDuplicateMsg && (
+              <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mb-3">
+                <p className="text-amber-800 text-sm">ℹ️ {scanDuplicateMsg}</p>
+                <button onClick={() => setScanDuplicateMsg('')} className="text-amber-400 hover:text-amber-600 ml-3 text-lg leading-none">✕</button>
+              </div>
+            )}
           {allergies.length === 0 ? (
             <p className="text-gray-500 text-center py-8">No allergies yet. Add some above!</p>
           ) : (
@@ -202,24 +305,18 @@ export default function AllergyManager({ userId }) {
               {allergies.map((allergy) => (
                 <li key={allergy.id} className="bg-gray-50 rounded-lg p-4 flex justify-between items-center hover:bg-gray-100 transition duration-200">
                   <div className="flex items-center gap-3">
-                  {commonAllergies.map(allergy_name => allergy_name.toLowerCase()).includes(allergy.allergy_name.toLowerCase()) ? (
-                    <img
-                      src={`${process.env.REACT_APP_API_URL}/api/assets/allergies/default_images/${allergy.allergy_name.toLowerCase()}`}
-                      alt={allergy.allergy_name}
-                      className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = `${process.env.REACT_APP_API_URL}/api/assets/allergies/default_images/placeholder`;
-                      }}
-                    />
-                  ) : (
-                    <AssetImage
-                      assetType="allergies"
-                      maxAttempts={10}
-                      name={allergy.allergy_name}
-                      category={allergy.allergy_category}
-                    />
-                  )}
+                    <div className="relative">
+                      <AssetImage
+                        assetType="allergies"
+
+                        name={allergy.allergy_name}
+                        category={allergy.allergy_category}
+                        userId={userId}
+                      />
+                      {scannedIds.has(allergy.id) && (
+                        <span className="absolute -bottom-1 -right-1 bg-teal-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center" title="Added via scan">📷</span>
+                      )}
+                    </div>
                   <div>
                     <span className="font-medium text-gray-900">{allergy.allergy_name}</span>
                     {allergy.allergy_category && (
@@ -258,6 +355,15 @@ export default function AllergyManager({ userId }) {
         allergy={editingAllergy}
         onSave={saveEditedAllergy}
       />
+
+      {showScanModal && (
+        <ScanImageModal
+          userId={userId}
+          scanType="allergies"
+          onItemsConfirmed={handleScanConfirmed}
+          onClose={() => setShowScanModal(false)}
+        />
+      )}
 
     </div>
   );

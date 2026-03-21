@@ -3,7 +3,7 @@ export const categoryOptions = ["vegetable", "fruit", "meat", "dairy", "grain", 
 export const unitOptions = ["g", "kg", "ml", "l", "cup", "tbsp", "tsp", "oz", "lb"];
 
 export const commonAllergies = ["peanuts", "tree nuts", "milk", "eggs", "wheat", "soy", "fish", "shellfish"];
-export const allergyCategories = ["food", "environmental", "medication"];
+export const allergyCategories = ["nuts", "dairy", "eggs", "gluten", "soy", "seafood"];
 
 export const mealTypeOptions = ["breakfast", "lunch", "dinner", "snack", "dessert"];
 export const cuisineOptions = ["American", "Italian", "Mexican", "Chinese", "Indian", "French", "Japanese"];

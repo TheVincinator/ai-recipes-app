@@ -38,8 +38,7 @@ class CloudStorage:
                     }
                 )
                 return True
-            except ClientError as e:
-                print(f"[ERROR] Failed to upload to R2: {e}", flush=True)
+            except ClientError:
                 return False
         else:
             # Local storage
@@ -67,8 +66,7 @@ class CloudStorage:
             try:
                 self.client.delete_object(Bucket=self.bucket_name, Key=key)
                 return True
-            except ClientError as e:
-                print(f"[ERROR] Failed to delete from R2: {e}", flush=True)
+            except ClientError:
                 return False
         else:
             local_path = os.path.join(self.local_base_path, key)

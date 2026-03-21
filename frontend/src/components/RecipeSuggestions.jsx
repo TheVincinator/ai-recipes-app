@@ -4,7 +4,8 @@ import ReactMarkdown from 'react-markdown';
 
 import { mealTypeOptions, cuisineOptions, dietOptions } from '../constants';
 
-const RecipeSuggestions = ({ userId }) => {
+const RecipeSuggestions = ({ user, userId: userIdProp }) => {
+  const userId = user ? user.id : userIdProp;
   const [recipes, setRecipes] = useState("");
   const [loading, setLoading] = useState(false);
   const [mealType, setMealType] = useState("");
@@ -176,9 +177,8 @@ const RecipeSuggestions = ({ userId }) => {
                     } else {
                       setMessageModal({ show: true, message: "✅ Recipe saved successfully!", success: true });
                     }                    
-                  } catch (err) {
-                    setMessageModal({ show: true, message: "❌ Error saving recipe.", success: false });;
-                    console.error(err);
+                  } catch {
+                    setMessageModal({ show: true, message: "❌ Error saving recipe.", success: false });
                   } finally {
                     setShowNameModal(false);
                     setRecipeName("");

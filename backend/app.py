@@ -1,36 +1,53 @@
-from flask import Flask, request, current_app, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory
 from db import db, User, Ingredient, Allergy, Recipe
 import requests
 import json
 from dotenv import load_dotenv
 import os
 from flask_cors import CORS
-from improved_icon_utils import (
-    async_generate_icon, 
-    cleanup_icon_if_unused
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from claude_icon_utils import (
+    generate_icon,
+    cleanup_icon_if_unused,
 )
 from cloud_storage_config import storage
 import jwt
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from sqlalchemy import text
+import anthropic
+import base64
 
-ingredientOptions = ["beans", "beef", "butter", "cheese", "chicken", "eggs", "fish", "flour", "garlic", "herbs", "milk", "oil", "onions", "pepper", "pork", "rice", "salt", "sugar", "tomatoes", "vinegar", "water"]
-allergyOptions = ["peanuts", "tree nuts", "milk", "eggs", "wheat", "soy", "fish", "shellfish"]
 
 app = Flask(__name__)
 
 app.url_map.strict_slashes = False
 
-CORS(app, origins=[
-    "https://ai-recipes-app-amber.vercel.app",
-    "http://localhost:3000"
-])
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri="memory://"
+)
+
+_cors_origins = os.getenv(
+    'CORS_ORIGINS',
+    'https://ai-recipes-app-amber.vercel.app,http://localhost:3000'
+).split(',')
+CORS(app, origins=_cors_origins)
 
 # Config
 # Only load .env in development
 if os.getenv('ENV') != 'production':
     load_dotenv()
+
+# Validate required environment variables in production
+IS_PRODUCTION = os.getenv('ENV') == 'production'
+if IS_PRODUCTION:
+    for var in ('JWT_SECRET_KEY', 'DATABASE_URL', 'ANTHROPIC_API_KEY', 'USE_CLOUD_STORAGE'):
+        if not os.getenv(var):
+            raise RuntimeError(f"Required environment variable {var} is not set")
 
 # Database configuration
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -44,9 +61,11 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 300,
 }
 
-app.config['AI_API_KEY'] = os.getenv('AI_API_KEY')
-app.config['AI_API_URL'] = os.getenv('AI_API_URL')
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
+jwt_secret = os.getenv('JWT_SECRET_KEY')
+if not jwt_secret:
+    jwt_secret = 'dev-secret-key-change-in-production'
+app.config['JWT_SECRET_KEY'] = jwt_secret
+app.config['ANTHROPIC_API_KEY'] = os.getenv('ANTHROPIC_API_KEY')
 
 # Initialize the database
 db.init_app(app)
@@ -112,12 +131,20 @@ def token_required(f):
 
 # User Routes
 @app.route('/api/users/', methods=['POST'])
+@limiter.limit("5 per minute")
 def create_user():
     body = request.get_json(silent=True)
     
     if not body or not body.get('username') or not body.get('email') or not body.get('password'):
         return failure_response('Missing required fields', 400)
-    
+
+    if len(body['username']) > 50:
+        return failure_response('Username must be 50 characters or fewer', 400)
+    if len(body['email']) > 255:
+        return failure_response('Email must be 255 characters or fewer', 400)
+    if len(body['password']) > 128:
+        return failure_response('Password must be 128 characters or fewer', 400)
+
     if User.query.filter_by(username=body['username']).first():
         return failure_response('Username already exists', 409)
         
@@ -198,15 +225,11 @@ def delete_user(current_user_id, user_id):
     db.session.delete(user)
     db.session.commit()
 
-    # Ingredient icon cleanup
     for name, category in ingredient_data:
-        if name not in ingredientOptions:
-            cleanup_icon_if_unused(name, category, 'ingredient', Ingredient, 'name')
+        cleanup_icon_if_unused(name, category, 'ingredient', Ingredient, 'name')
 
-    # Allergy icon cleanup
     for name, category in allergy_data:
-        if name not in allergyOptions:
-            cleanup_icon_if_unused(name, category, 'allergy', Allergy, 'allergy_name')
+        cleanup_icon_if_unused(name, category, 'allergy', Allergy, 'allergy_name')
 
     return success_response(user.to_dict())
 
@@ -237,10 +260,8 @@ def add_allergy_for_user(current_user_id, user_id):
     db.session.add(new_allergy)
     db.session.commit()
 
-    # Trigger async icon generation if custom
-    if name not in allergyOptions:
-        app_obj = current_app._get_current_object()
-        async_generate_icon(app_obj, name, category, 'allergy')
+    if not body.get('skip_icon'):
+        generate_icon(name, category, 'allergy')
 
     return success_response(new_allergy.to_dict(), 201)
 
@@ -272,19 +293,10 @@ def update_allergy_for_user(current_user_id, user_id, allergy_id):
     allergy.allergy_category = new_category
     db.session.commit()
 
-    # Handle icon changes
-    is_old_custom = old_name not in allergyOptions
-    is_new_custom = new_name not in allergyOptions
-
     if new_name != old_name or new_category != old_category:
-        # Clean up old icon if custom and no longer used
-        if is_old_custom:
-            cleanup_icon_if_unused(old_name, old_category, 'allergy', Allergy, 'allergy_name')
-        
-        # Generate new icon if custom
-        if is_new_custom:
-            app_obj = current_app._get_current_object()
-            async_generate_icon(app_obj, new_name, new_category, 'allergy')
+        cleanup_icon_if_unused(old_name, old_category, 'allergy', Allergy, 'allergy_name')
+        delete_user_scan_icon(user_id, old_name, old_category, 'allergies')
+        generate_icon(new_name, new_category, 'allergy')
 
     return success_response(allergy.to_dict())
 
@@ -308,9 +320,10 @@ def delete_allergy_for_user(current_user_id, user_id, allergy_id):
     db.session.delete(allergy)
     db.session.commit()
 
-    # Clean up icon if no longer used
-    if name not in allergyOptions:
-        cleanup_icon_if_unused(name, category, 'allergy', Allergy, 'allergy_name')
+    cleanup_icon_if_unused(name, category, 'allergy', Allergy, 'allergy_name')
+
+    # Always delete this user's personal scan icon
+    delete_user_scan_icon(user_id, name, category, 'allergies')
 
     return success_response(allergy.to_dict())
 
@@ -355,10 +368,8 @@ def add_ingredient(current_user_id, user_id):
     db.session.add(new_ingredient)
     db.session.commit()
 
-    # Trigger async icon generation if custom
-    if name not in ingredientOptions:
-        app_obj = current_app._get_current_object()
-        async_generate_icon(app_obj, name, category, 'ingredient')
+    if not body.get('skip_icon'):
+        generate_icon(name, category, 'ingredient')
 
     return success_response(new_ingredient.to_dict(), 201)
 
@@ -417,19 +428,10 @@ def update_ingredient(current_user_id, user_id, ingredient_id):
     
     db.session.commit()
 
-    # Handle icon changes
-    is_old_custom = old_name not in ingredientOptions
-    is_new_custom = new_name not in ingredientOptions
-
     if new_name != old_name or new_category != old_category:
-        # Clean up old icon if custom and no longer used
-        if is_old_custom:
-            cleanup_icon_if_unused(old_name, old_category, 'ingredient', Ingredient, 'name')
-        
-        # Generate new icon if custom
-        if is_new_custom:
-            app_obj = current_app._get_current_object()
-            async_generate_icon(app_obj, new_name, new_category, 'ingredient')
+        cleanup_icon_if_unused(old_name, old_category, 'ingredient', Ingredient, 'name')
+        delete_user_scan_icon(user_id, old_name, old_category, 'ingredients')
+        generate_icon(new_name, new_category, 'ingredient')
 
     return success_response(ingredient.to_dict(), 200)
 
@@ -453,79 +455,37 @@ def delete_ingredient(current_user_id, user_id, ingredient_id):
     db.session.delete(ingredient)
     db.session.commit()
     
-    # Clean up icon if no longer used
-    if ingredient_name not in ingredientOptions:
-        cleanup_icon_if_unused(ingredient_name, ingredient_category, 'ingredient', Ingredient, 'name')
-    
+    cleanup_icon_if_unused(ingredient_name, ingredient_category, 'ingredient', Ingredient, 'name')
+
+    # Always delete this user's personal scan icon
+    delete_user_scan_icon(user_id, ingredient_name, ingredient_category, 'ingredients')
+
     return success_response(ingredient.to_dict())
 
 
 # Asset Serving Routes
-@app.route('/api/assets/ingredients/default_images/<string:name>')
-def get_ingredient_default_image_by_name(name):
-    filename = name.lower() + '.jpg'
-    return send_from_directory('ingredient_icon_generator/assets/ingredients/default_images', filename)
-
-
-@app.route('/api/assets/ingredients/generated_images/<string:combined>')
-def get_ingredient_generated_image_by_name(combined):
-    """Serve ingredient images (proxy from cloud or serve locally)"""
-    if storage.use_cloud:
-        key = f"ingredients/generated_images/{combined}.png"
-        url = storage.get_url(key)
-        r = requests.get(url)
-        if r.status_code == 200:
-            return r.content, 200, {'Content-Type': 'image/png', 'Cache-Control': 'max-age=3600'}
+@app.route('/api/assets/<string:asset_type>/generated_images/<string:combined>')
+def get_generated_image(asset_type, combined):
+    """Serve generated icons (SVG from Claude or PNG scan icons) from cloud or local storage."""
+    if asset_type not in ('ingredients', 'allergies'):
         return '', 404
-    else:
-        # Serve locally (development)
-        filename = f"{combined}.png"
-        path = os.path.join('ingredient_icon_generator', 'assets', 
-                           'ingredients', 'generated_images', filename)
-        
-        if os.path.exists(path):
-            return send_from_directory(
-                'ingredient_icon_generator/assets/ingredients/generated_images',
-                filename
-            )
-        
-        return send_from_directory(
-            'ingredient_icon_generator/assets/ingredients/default_images',
-            'placeholder.png'
-        )
 
-
-@app.route('/api/assets/allergies/default_images/<string:name>')
-def get_allergy_default_image_by_name(name):
-    filename = name.lower() + '.jpg'
-    return send_from_directory('ingredient_icon_generator/assets/allergies/default_images', filename)
-
-
-@app.route('/api/assets/allergies/generated_images/<string:combined>')
-def get_allergy_generated_image_by_name(combined):
-    """Serve allergy images (proxy from cloud or serve locally)"""
     if storage.use_cloud:
-        key = f"allergies/generated_images/{combined}.png"
-        url = storage.get_url(key)
-        r = requests.get(url)
-        if r.status_code == 200:
-            return r.content, 200, {'Content-Type': 'image/png', 'Cache-Control': 'max-age=3600'}
-        return '', 404
+        for ext, ct in [('.svg', 'image/svg+xml'), ('.png', 'image/png')]:
+            r = requests.get(storage.get_url(f"{asset_type}/generated_images/{combined}{ext}"))
+            if r.status_code == 200:
+                return r.content, 200, {'Content-Type': ct, 'Cache-Control': 'no-cache'}
     else:
-        filename = f"{combined}.png"
-        path = os.path.join('ingredient_icon_generator', 'assets', 
-                           'allergies', 'generated_images', filename)
-        
-        if os.path.exists(path):
-            return send_from_directory(
-                'ingredient_icon_generator/assets/allergies/generated_images',
-                filename
-            )
-        
-        return send_from_directory(
-            'ingredient_icon_generator/assets/allergies/default_images',
-            'placeholder.png'
-        )
+        for ext in ('.svg', '.png'):
+            path = os.path.join('ingredient_icon_generator', 'assets',
+                                asset_type, 'generated_images', f"{combined}{ext}")
+            if os.path.exists(path):
+                return send_from_directory(
+                    f'ingredient_icon_generator/assets/{asset_type}/generated_images',
+                    f"{combined}{ext}"
+                )
+
+    return '', 404
 
 
 # Search Route
@@ -553,6 +513,7 @@ def search_ingredients(current_user_id, user_id):
 
 # Authentication Route
 @app.route('/api/auth/login/', methods=['POST'])
+@limiter.limit("10 per minute")
 def login():
     body = request.get_json(silent=True)
     
@@ -594,10 +555,18 @@ def get_recipe_suggestions(current_user_id, user_id):
     if not ingredients:
         return failure_response('No ingredients found for this user')
     
-    # Optional filters
-    meal_type = request.args.get('meal_type', '')  # breakfast, lunch, dinner
-    cuisine = request.args.get('cuisine', '')      # italian, mexican, etc.
-    diet = request.args.get('diet', '')            # vegetarian, vegan, etc.
+    # Optional filters — whitelist to prevent prompt injection
+    VALID_MEAL_TYPES = {'breakfast', 'lunch', 'dinner', 'snack', 'dessert'}
+    VALID_CUISINES = {'american', 'italian', 'mexican', 'chinese', 'indian', 'french', 'japanese'}
+    VALID_DIETS = {'vegetarian', 'vegan', 'gluten-free', 'keto', 'pescatarian'}
+
+    raw_meal_type = request.args.get('meal_type', '').strip().lower()
+    raw_cuisine = request.args.get('cuisine', '').strip().lower()
+    raw_diet = request.args.get('diet', '').strip().lower()
+
+    meal_type = raw_meal_type if raw_meal_type in VALID_MEAL_TYPES else ''
+    cuisine = raw_cuisine if raw_cuisine in VALID_CUISINES else ''
+    diet = raw_diet if raw_diet in VALID_DIETS else ''
     
     # 🔹 Use helper function
     prompt = build_recipe_prompt(
@@ -609,40 +578,24 @@ def get_recipe_suggestions(current_user_id, user_id):
     )
 
     try:
-        AI_API_URL = app.config.get('AI_API_URL', 'https://router.huggingface.co/novita/v3/openai/chat/completions')
-        headers = {"Authorization": "Bearer " + app.config['AI_API_KEY']}
-        payload = {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "model": "deepseek/deepseek-v3-0324",
-        }
-
-        response = requests.post(AI_API_URL, headers=headers, json=payload)
-
-        if response.status_code == 200:
-            api_response = response.json()
-            choices = api_response.get('choices')
-            if not choices or not choices[0].get('message', {}).get('content'):
-                return failure_response('Invalid response from AI API', 500)
-            recipes = choices[0]['message']['content']
-            return success_response({
-                'ingredients_used': [i.name for i in ingredients],
-                'recipes': recipes,
-                'filters': {
-                    'meal_type': meal_type,
-                    'cuisine': cuisine,
-                    'diet': diet
-                }
-            })
-        else:
-            return failure_response(f'Failed to get recipe suggestions: {response.text}', response.status_code)
-            
-    except Exception as e:
-        return failure_response(f'Error calling AI API: {str(e)}', 500)
+        client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+        response = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        recipes = response.content[0].text
+        return success_response({
+            'ingredients_used': [i.name for i in ingredients],
+            'recipes': recipes,
+            'filters': {
+                'meal_type': meal_type,
+                'cuisine': cuisine,
+                'diet': diet
+            }
+        })
+    except Exception:
+        return failure_response('Error generating recipes', 500)
     
 
 def build_recipe_prompt(ingredients, allergies, meal_type=None, cuisine=None, diet=None):
@@ -660,6 +613,7 @@ def build_recipe_prompt(ingredients, allergies, meal_type=None, cuisine=None, di
         ingredient_descriptions.append(desc)
 
     prompt = f"I have the following ingredients: {', '.join(ingredient_descriptions)}."
+    prompt += " Suggest a few recipes using these ingredients."
 
     # Allergies
     if allergies:
@@ -669,7 +623,7 @@ def build_recipe_prompt(ingredients, allergies, meal_type=None, cuisine=None, di
             if allergy.allergy_category:
                 desc += f" ({allergy.allergy_category})"
             allergy_descriptions.append(desc)
-        prompt += f" Please avoid any recipes that include these allergens: {', '.join(allergy_descriptions)}."
+        prompt += f" You must strictly exclude any recipes containing these allergens — do not suggest them even with caveats or disclaimers: {', '.join(allergy_descriptions)}."
 
     # Optional filters
     if meal_type:
@@ -679,9 +633,146 @@ def build_recipe_prompt(ingredients, allergies, meal_type=None, cuisine=None, di
     if diet:
         prompt += f" The recipes should follow a {diet} diet."
 
-    prompt += " Please suggest a few recipes that fit these criteria, including ingredients and basic instructions."
+    prompt += " For each recipe provide: a name, ingredient list with quantities, step-by-step instructions, and a nutritional estimate per serving formatted exactly as: **Nutrition (per serving):** ~X cal | Xg protein | Xg carbs | Xg fat. Do not ask follow-up questions or suggest modifications at the end."
 
     return prompt
+
+
+def delete_user_scan_icon(user_id, name, category, asset_type):
+    """Delete the user-specific scan icon from storage, if it exists."""
+    combined = f"{name}_{category}" if category else name
+    key = f"{asset_type}/generated_images/{user_id}_{combined}.png"
+    storage.delete(key)
+
+
+@app.route('/api/assets/<string:asset_type>/upload-icon/', methods=['POST'])
+@token_required
+def upload_scan_icon(current_user_id, asset_type):
+    if asset_type not in ('ingredients', 'allergies'):
+        return failure_response('Invalid asset type', 400)
+
+    body = request.get_json(silent=True)
+    if not body or not body.get('image') or not body.get('name'):
+        return failure_response('Missing required fields', 400)
+
+    name = body['name'].strip().lower()
+    category = (body.get('category') or '').strip().lower()
+    image_data = body['image']
+
+    if ',' in image_data:
+        image_data = image_data.split(',', 1)[1]
+
+    combined = f"{name}_{category}" if category else name
+    key = f"{asset_type}/generated_images/{current_user_id}_{combined}.png"
+
+    try:
+        from io import BytesIO
+
+        raw = base64.b64decode(image_data)
+        buf = BytesIO(raw)
+
+        success = storage.upload_image(buf, key, content_type='image/png')
+        if success:
+            return success_response({'key': key})
+        return failure_response('Failed to upload icon', 500)
+    except Exception:
+        return failure_response('Error uploading icon', 500)
+
+
+@app.route('/api/users/<int:user_id>/scan-image/', methods=['POST'])
+@limiter.limit("20 per hour")
+@token_required
+@authorize_user
+def scan_image(current_user_id, user_id):
+    body = request.get_json(silent=True)
+    if not body or not body.get('image'):
+        return failure_response('Missing image data', 400)
+
+    scan_type = body.get('scan_type', 'ingredients')  # 'ingredients' or 'allergies'
+    image_data = body['image']
+
+    # Strip data URL prefix if present (e.g. "data:image/jpeg;base64,...")
+    if ',' in image_data:
+        image_data = image_data.split(',', 1)[1]
+
+    # Detect media type from original data URL or default to jpeg
+    media_type = 'image/jpeg'
+    if body['image'].startswith('data:'):
+        prefix = body['image'].split(';')[0]
+        media_type = prefix.split(':')[1]
+
+    anthropic_key = app.config.get('ANTHROPIC_API_KEY')
+    if not anthropic_key:
+        return failure_response('Anthropic API key not configured', 500)
+
+    try:
+        claude_client = anthropic.Anthropic(api_key=anthropic_key)
+
+        bbox_instruction = (
+            " Also provide a bounding box for each item as a percentage of the image dimensions. "
+            'The bbox field must be [x1_pct, y1_pct, x2_pct, y2_pct] where values are 0-100 '
+            "(percentage from left/top edges). Example: [10, 20, 40, 60] means the item occupies "
+            "from 10% to 40% horizontally and 20% to 60% vertically."
+        )
+
+        if scan_type == 'allergies':
+            prompt = (
+                "Look at this image carefully. Identify all food items visible. "
+                "For each food item, determine if it is a common allergen or contains common allergens "
+                "(such as peanuts, tree nuts, milk/dairy, eggs, wheat/gluten, soy, fish, shellfish, sesame). "
+                "Return ONLY a JSON object with this exact format, no extra text:\n"
+                '{"items": [{"name": "item name", "category": "allergen category or empty string", "bbox": [x1_pct, y1_pct, x2_pct, y2_pct]}]}\n'
+                "Only include items that are allergens or contain allergens. "
+                "Use simple lowercase names. Category should be one of: nuts, dairy, eggs, gluten, soy, seafood, or empty string."
+                + bbox_instruction
+            )
+        else:
+            prompt = (
+                "Look at this image carefully. Identify all food items, ingredients, or produce visible. "
+                "Return ONLY a JSON object with this exact format, no extra text:\n"
+                '{"items": [{"name": "item name", "category": "food category or empty string", "bbox": [x1_pct, y1_pct, x2_pct, y2_pct]}]}\n'
+                "Use simple lowercase names (e.g. 'apple', 'milk', 'chicken breast'). "
+                "Category should be one of: vegetable, fruit, meat, dairy, grain, spice, condiment, frozen, or empty string."
+                + bbox_instruction
+            )
+
+        response = claude_client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=1024,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": image_data,
+                        },
+                    },
+                    {"type": "text", "text": prompt}
+                ],
+            }]
+        )
+
+        text_content = next((b.text for b in response.content if b.type == "text"), "")
+
+        # Parse the JSON response from Claude
+        # Claude might wrap it in markdown code block
+        if "```" in text_content:
+            text_content = text_content.split("```")[1]
+            if text_content.startswith("json"):
+                text_content = text_content[4:]
+
+        parsed = json.loads(text_content.strip())
+        items = parsed.get("items", [])
+
+        return success_response({"items": items, "scan_type": scan_type})
+
+    except json.JSONDecodeError:
+        return failure_response('Could not parse response from Claude', 500)
+    except Exception:
+        return failure_response('Error scanning image', 500)
 
 
 @app.route('/api/users/<int:user_id>/saved-recipes/')
@@ -773,8 +864,8 @@ def health():
         # Test database connection
         db.session.execute(text("SELECT 1"))
         return jsonify({'status': 'healthy', 'database': 'connected'}), 200
-    except Exception as e:
-        return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
+    except Exception:
+        return jsonify({'status': 'unhealthy'}), 500
     
 
 if __name__ == '__main__':
